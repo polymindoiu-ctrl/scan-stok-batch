@@ -491,7 +491,6 @@
                             <th>Item Code</th>
                             <th>Batch</th>
                             <th>Qty</th>
-                            <th>Posisi</th>
                             <th>Remark</th>
                         </tr>
                     </thead>
@@ -977,7 +976,6 @@
                         <td><b>${escapeHtml(item.itemname)}</b></td>
                         <td>${escapeHtml(item.batch)}</td>
                         <td style="color: var(--success-color); font-weight:700;">+${item.stok}</td>
-                        <td>${escapeHtml(item.posisi || '-')}</td>
                         <td>${escapeHtml(item.remark || '-')}</td>
                     </tr>
                 `;
