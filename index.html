@@ -42,7 +42,7 @@
 
         .container {
             width: 100%;
-            max-width: 500px;
+            max-width: 600px;
             display: flex;
             flex-direction: column;
             gap: 16px;
@@ -312,6 +312,80 @@
         }
 
         .relative { position: relative; }
+
+        /* FITUR TABEL DATA HARI INI */
+        .today-list-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 8px;
+        }
+
+        .today-list-header h2 {
+            font-size: 1rem;
+            color: var(--text-main);
+            font-weight: 700;
+        }
+
+        .today-count {
+            font-size: 0.8rem;
+            background-color: #e2e8f0;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-weight: 600;
+        }
+
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto;
+            border: 1px solid #e2e8f0;
+            border-radius: var(--radius);
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.82rem;
+            text-align: left;
+        }
+
+        .data-table th {
+            background-color: #f1f5f9;
+            color: var(--text-main);
+            padding: 8px 10px;
+            font-weight: 700;
+            border-bottom: 1px solid #cbd5e1;
+            white-space: nowrap;
+        }
+
+        .data-table td {
+            padding: 8px 10px;
+            border-bottom: 1px solid #e2e8f0;
+            white-space: nowrap;
+        }
+
+        .data-table tbody tr:nth-child(even) {
+            background-color: #f8fafc;
+        }
+
+        .data-table tbody tr:hover {
+            background-color: #eff6ff;
+        }
+
+        .data-table tfoot td {
+            background-color: #f1f5f9;
+            font-weight: 700;
+            border-top: 2px solid #cbd5e1;
+        }
+
+        .empty-today {
+            text-align: center;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            padding: 16px;
+        }
     </style>
 </head>
 <body>
@@ -399,6 +473,42 @@
                 </div>
             </form>
         </div>
+
+        <!-- FITUR TABEL INPUT HARI INI -->
+        <div class="card">
+            <div class="today-list-header">
+                <h2>📊 Tabel Input Hari Ini</h2>
+                <span id="todayCount" class="today-count">0 Item</span>
+            </div>
+
+            <!-- TABEL CONTAINER -->
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Jam</th>
+                            <th>Item Code</th>
+                            <th>Batch</th>
+                            <th>Qty</th>
+                            <th>Posisi</th>
+                            <th>Remark</th>
+                        </tr>
+                    </thead>
+                    <tbody id="todayTableBody">
+                        <tr>
+                            <td colspan="6" class="empty-today">Belum ada data diinput hari ini.</td>
+                        </tr>
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="3" style="text-align: right;">Total Qty:</td>
+                            <td id="todayTotalQty" style="color: var(--primary-color);">0</td>
+                            <td colspan="2"></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
     </div>
 
     <!-- QR SCANNER MODAL -->
@@ -458,7 +568,6 @@
                 stockData = [];
 
                 if (data) {
-                    // Flatten object Firebase ke array
                     Object.keys(data).forEach(key => {
                         stockData.push({
                             _id: key,
@@ -469,6 +578,7 @@
 
                 updateConnectionStatus(true);
                 showAlert("", "hide");
+                renderTodayTable(); // Render tabel setelah data dimuat
             } catch (error) {
                 console.error("Firebase Error:", error);
                 updateConnectionStatus(false);
@@ -511,17 +621,14 @@
 
         /* EVENT LISTENERS SETUP */
         function setupEventListeners() {
-            // Autocomplete Item Code
             const itemCodeInput = document.getElementById("itemCode");
             itemCodeInput.addEventListener("input", handleItemCodeInput);
             itemCodeInput.addEventListener("focus", handleItemCodeInput);
 
-            // Batch Input Suggestions
             const batchInput = document.getElementById("batchInput");
             batchInput.addEventListener("focus", showBatchSuggestions);
             batchInput.addEventListener("input", checkCustomBatchInput);
 
-            // Global Click listener untuk menutup dropdown suggestion jika klik di luar
             document.addEventListener("click", (e) => {
                 if (!e.target.closest("#itemCode") && !e.target.closest("#itemSuggestions")) {
                     hideElement("itemSuggestions");
@@ -531,7 +638,6 @@
                 }
             });
 
-            // Buttons
             document.getElementById("btnScanQR").addEventListener("click", startQRScanner);
             document.getElementById("btnCloseScanner").addEventListener("click", stopQRScanner);
             document.getElementById("btnSave").addEventListener("click", handleSave);
@@ -549,7 +655,6 @@
                 return;
             }
 
-            // Cari item unik berdasarkan itemnumber
             const uniqueItemsMap = new Map();
             stockData.forEach(item => {
                 if (item.itemnumber && item.itemnumber.toLowerCase().includes(query)) {
@@ -586,7 +691,6 @@
         function processSelectedItem(itemCode) {
             selectedItemCode = itemCode;
             
-            // Filter data berdasarkan Item Code
             const itemRecords = stockData.filter(d => d.itemnumber === itemCode);
 
             if (itemRecords.length === 0) {
@@ -598,101 +702,92 @@
                 return;
             }
 
-            // Ambil Item Name dari record pertama yang ditemukan
             const itemName = itemRecords[0].itemname || "-";
             document.getElementById("itemName").value = itemName;
             showAlert("", "hide");
             setFormInputsEnabled(true);
 
-            // Proses Pencarian Batch Unik (30 Hari Terakhir)
             processBatchSelection(itemRecords);
         }
 
-        /* REVISI PERBAIKAN LOGIKA BATCH (30 HARI TERAKHIR) */
-function processBatchSelection(itemRecords) {
-    // 1. Tentukan tanggal acuan (30 hari yang lalu dari hari ini)
-    const today = new Date();
-    today.setHours(23, 59, 59, 999); // Set ke akhir hari ini
-    
-    const thirtyDaysAgo = new Date(today);
-    thirtyDaysAgo.setDate(today.getDate() - 30);
-    thirtyDaysAgo.setHours(0, 0, 0, 0); // Set ke awal hari 30 hari lalu
+        /* LOGIKA BATCH (30 HARI TERAKHIR) */
+        function processBatchSelection(itemRecords) {
+            const today = new Date();
+            today.setHours(23, 59, 59, 999);
+            
+            const thirtyDaysAgo = new Date(today);
+            thirtyDaysAgo.setDate(today.getDate() - 30);
+            thirtyDaysAgo.setHours(0, 0, 0, 0);
 
-    // Helper untuk konversi aman string "YYYY-MM-DD" ke objek Date
-    function parseRecordDate(dateStr) {
-        if (!dateStr) return null;
-        const parts = String(dateStr).trim().split('-');
-        if (parts.length === 3) {
-            const y = parseInt(parts[0], 10);
-            const m = parseInt(parts[1], 10) - 1; // Month 0-indexed
-            const d = parseInt(parts[2], 10);
-            return new Date(y, m, d);
-        }
-        return null;
-    }
+            function parseRecordDate(dateStr) {
+                if (!dateStr) return null;
+                const parts = String(dateStr).trim().split('-');
+                if (parts.length === 3) {
+                    const y = parseInt(parts[0], 10);
+                    const m = parseInt(parts[1], 10) - 1;
+                    const d = parseInt(parts[2], 10);
+                    return new Date(y, m, d);
+                }
+                return null;
+            }
 
-    // 2. Filter item dalam 30 hari terakhir dengan parsing Date aman
-    const recentRecords = itemRecords.filter(r => {
-        if (!r.batch) return false;
-        const recDate = parseRecordDate(r.tanggal);
-        return recDate && recDate >= thirtyDaysAgo && recDate <= today;
-    });
+            const recentRecords = itemRecords.filter(r => {
+                if (!r.batch) return false;
+                const recDate = parseRecordDate(r.tanggal);
+                return recDate && recDate >= thirtyDaysAgo && recDate <= today;
+            });
 
-    // Jika tidak ada batch dalam 30 hari terakhir, ambil batch terbaru dari seluruh data historical (fallback)
-    const recordsToProcess = recentRecords.length > 0 ? recentRecords : itemRecords.filter(r => r.batch);
+            const recordsToProcess = recentRecords.length > 0 ? recentRecords : itemRecords.filter(r => r.batch);
 
-    if (recordsToProcess.length === 0) {
-        document.getElementById("batchInput").value = "";
-        document.getElementById("batchInfo").innerText = "Tidak ada data batch untuk Item Code ini. Silakan isi batch secara manual.";
-        document.getElementById("batchInfo").style.color = "var(--warning-color)";
-        window.currentSortedBatches = [];
-        return;
-    }
+            if (recordsToProcess.length === 0) {
+                document.getElementById("batchInput").value = "";
+                document.getElementById("batchInfo").innerText = "Tidak ada data batch untuk Item Code ini. Silakan isi batch secara manual.";
+                document.getElementById("batchInfo").style.color = "var(--warning-color)";
+                window.currentSortedBatches = [];
+                return;
+            }
 
-    // 3. Kelompokkan batch dan cari kemunculan/tanggal terakhirnya
-    const batchMap = new Map();
-    recordsToProcess.forEach(r => {
-        const b = String(r.batch).trim();
-        if (!b) return;
+            const batchMap = new Map();
+            recordsToProcess.forEach(r => {
+                const b = String(r.batch).trim();
+                if (!b) return;
 
-        const recordDateStr = String(r.tanggal || "");
-        const uploadedAt = String(r.uploaded_at || "");
+                const recordDateStr = String(r.tanggal || "");
+                const uploadedAt = String(r.uploaded_at || "");
 
-        if (!batchMap.has(b)) {
-            batchMap.set(b, { tanggal: recordDateStr, uploaded_at: uploadedAt, record: r });
-        } else {
-            const existing = batchMap.get(b);
-            if (recordDateStr > existing.tanggal) {
-                batchMap.set(b, { tanggal: recordDateStr, uploaded_at: uploadedAt, record: r });
-            } else if (recordDateStr === existing.tanggal && uploadedAt > existing.uploaded_at) {
-                batchMap.set(b, { tanggal: recordDateStr, uploaded_at: uploadedAt, record: r });
+                if (!batchMap.has(b)) {
+                    batchMap.set(b, { tanggal: recordDateStr, uploaded_at: uploadedAt, record: r });
+                } else {
+                    const existing = batchMap.get(b);
+                    if (recordDateStr > existing.tanggal) {
+                        batchMap.set(b, { tanggal: recordDateStr, uploaded_at: uploadedAt, record: r });
+                    } else if (recordDateStr === existing.tanggal && uploadedAt > existing.uploaded_at) {
+                        batchMap.set(b, { tanggal: recordDateStr, uploaded_at: uploadedAt, record: r });
+                    }
+                }
+            });
+
+            const sortedBatches = Array.from(batchMap.entries()).sort((a, b) => {
+                if (b[1].tanggal !== a[1].tanggal) {
+                    return b[1].tanggal.localeCompare(a[1].tanggal);
+                }
+                return b[1].uploaded_at.localeCompare(a[1].uploaded_at);
+            });
+
+            const defaultBatch = sortedBatches[0][0];
+            const latestInfo = sortedBatches[0][1].record;
+
+            document.getElementById("batchInput").value = defaultBatch;
+            window.currentSortedBatches = sortedBatches.map(item => item[0]);
+
+            if (recentRecords.length > 0) {
+                document.getElementById("batchInfo").innerText = `Batch ditemukan dari data 30 hari terakhir. (Terakhir: ${formatDisplayDate(latestInfo.tanggal)}, Stok: ${latestInfo.stok}, Remark: ${latestInfo.remark || '-'})`;
+                document.getElementById("batchInfo").style.color = "var(--text-muted)";
+            } else {
+                document.getElementById("batchInfo").innerText = `Tidak ada batch dalam 30 hari terakhir. Menggunakan batch terakhir historical: ${defaultBatch}`;
+                document.getElementById("batchInfo").style.color = "var(--warning-color)";
             }
         }
-    });
-
-    // 4. Urutkan batch unik berdasarkan kemunculan terakhir (Terbaru ke Terlama)
-    const sortedBatches = Array.from(batchMap.entries()).sort((a, b) => {
-        if (b[1].tanggal !== a[1].tanggal) {
-            return b[1].tanggal.localeCompare(a[1].tanggal);
-        }
-        return b[1].uploaded_at.localeCompare(a[1].uploaded_at);
-    });
-
-    // 5. Set Default Batch & Tampilkan Informasi
-    const defaultBatch = sortedBatches[0][0];
-    const latestInfo = sortedBatches[0][1].record;
-
-    document.getElementById("batchInput").value = defaultBatch;
-    window.currentSortedBatches = sortedBatches.map(item => item[0]);
-
-    if (recentRecords.length > 0) {
-        document.getElementById("batchInfo").innerText = `Batch ditemukan dari data 30 hari terakhir. (Terakhir: ${formatDisplayDate(latestInfo.tanggal)}, Stok: ${latestInfo.stok}, Remark: ${latestInfo.remark || '-'})`;
-        document.getElementById("batchInfo").style.color = "var(--text-muted)";
-    } else {
-        document.getElementById("batchInfo").innerText = `Tidak ada batch dalam 30 hari terakhir. Menggunakan batch terakhir historical: ${defaultBatch}`;
-        document.getElementById("batchInfo").style.color = "var(--warning-color)";
-    }
-}
 
         function showBatchSuggestions() {
             if (!window.currentSortedBatches || window.currentSortedBatches.length === 0) return;
@@ -737,7 +832,6 @@ function processBatchSelection(itemRecords) {
 
             const config = { fps: 10, qrbox: { width: 250, height: 250 } };
             
-            // Prioritaskan kamera belakang
             html5QrCode.start(
                 { facingMode: "environment" },
                 config,
@@ -757,15 +851,12 @@ function processBatchSelection(itemRecords) {
             document.getElementById("itemCode").value = itemCode;
             processSelectedItem(itemCode);
 
-            // Fokus otomatis ke Qty setelah scan berhasil
             setTimeout(() => {
                 document.getElementById("qtyInput").focus();
             }, 300);
         }
 
-        function onScanFailure(error) {
-            // Callback terus berjalan ketika frame QR tidak terdeteksi (abaikan)
-        }
+        function onScanFailure(error) {}
 
         function stopQRScanner() {
             if (html5QrCode && html5QrCode.isScanning) {
@@ -782,7 +873,7 @@ function processBatchSelection(itemRecords) {
 
         /* SAVE DATA LOGIC & VALIDATION */
         async function handleSave() {
-            if (isSaving) return; // Prevent Double Submit
+            if (isSaving) return;
 
             const itemCode = document.getElementById("itemCode").value.trim();
             const itemName = document.getElementById("itemName").value.trim();
@@ -792,7 +883,6 @@ function processBatchSelection(itemRecords) {
             const remark = document.getElementById("remarkInput").value.trim();
             const posisi = document.getElementById("posisiInput").value.trim();
 
-            /* VALIDATION */
             if (!itemCode) {
                 showAlert("⚠ Item Code belum dipilih.", "error");
                 return;
@@ -810,7 +900,6 @@ function processBatchSelection(itemRecords) {
                 return;
             }
 
-            // Payload Baru
             const payload = {
                 batch: batch,
                 itemname: itemName,
@@ -822,7 +911,6 @@ function processBatchSelection(itemRecords) {
                 uploaded_at: new Date().toISOString()
             };
 
-            // Lock Submit & Loading UI
             isSaving = true;
             document.getElementById("btnSave").disabled = true;
             showLoading(true, "Menyimpan data...");
@@ -830,23 +918,22 @@ function processBatchSelection(itemRecords) {
             try {
                 const response = await saveStockToFirebase(payload);
                 
-                // Tambahkan ke cache lokal secara langsung
                 stockData.push({
                     _id: response.name,
                     ...payload
                 });
 
-                // Notifikasi Berhasil
                 showAlert(`✓ DATA BERHASIL DISIMPAN<br><br>Item: <b>${escapeHtml(itemCode)}</b><br>Batch: <b>${escapeHtml(batch)}</b><br>Qty: <b>${qty}</b>`, "success");
 
-                // Reset Field Input Form Saja
+                // Reset Field Input Form
                 document.getElementById("qtyInput").value = "";
                 document.getElementById("remarkInput").value = "";
                 document.getElementById("posisiInput").value = "";
 
-                // Refresh Data Batch 30 hari terakhir agar record baru terupdate di suggestion
+                // Refresh Data Batch & Tabel Hari Ini
                 const itemRecords = stockData.filter(d => d.itemnumber === itemCode);
                 processBatchSelection(itemRecords);
+                renderTodayTable();
 
             } catch (error) {
                 console.error("Save Error:", error);
@@ -856,6 +943,43 @@ function processBatchSelection(itemRecords) {
                 document.getElementById("btnSave").disabled = false;
                 showLoading(false);
             }
+        }
+
+        /* FITUR: RENDER TABEL DAFTAR INPUT HARI INI */
+        function renderTodayTable() {
+            const todayISO = getTodayISOString();
+            const tbody = document.getElementById("todayTableBody");
+            
+            // Filter data yang diinput pada hari ini
+            const todayData = stockData.filter(item => String(item.tanggal) === todayISO);
+
+            // Urutkan dari yang terbaru diinput
+            todayData.sort((a, b) => String(b.uploaded_at || "").localeCompare(String(a.uploaded_at || "")));
+
+            // Hitung ringkasan
+            document.getElementById("todayCount").innerText = `${todayData.length} Item`;
+            
+            const totalQty = todayData.reduce((sum, item) => sum + (parseFloat(item.stok) || 0), 0);
+            document.getElementById("todayTotalQty").innerText = totalQty.toLocaleString("id-ID");
+
+            if (todayData.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="empty-today">Belum ada data diinput hari ini.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = todayData.map(item => {
+                const timeStr = item.uploaded_at ? new Date(item.uploaded_at).toLocaleTimeString("id-ID", { hour: '2-digit', minute: '2-digit' }) : '-';
+                return `
+                    <tr>
+                        <td>${timeStr}</td>
+                        <td><b>${escapeHtml(item.itemnumber)}</b></td>
+                        <td>${escapeHtml(item.batch)}</td>
+                        <td style="color: var(--success-color); font-weight:700;">+${item.stok}</td>
+                        <td>${escapeHtml(item.posisi || '-')}</td>
+                        <td>${escapeHtml(item.remark || '-')}</td>
+                    </tr>
+                `;
+            }).join("");
         }
 
         /* FORM RESET HELPERS */
