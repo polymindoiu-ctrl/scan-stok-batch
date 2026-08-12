@@ -338,7 +338,7 @@
             <div id="alertBox" class="alert"></div>
 
             <button type="button" id="btnScanQR" class="btn btn-primary" style="margin-bottom: 16px;">
-                📷 SCAN QR
+                ðŸ“· SCAN QR
             </button>
 
             <form id="stockForm" autocomplete="off" onsubmit="return false;">
@@ -383,8 +383,8 @@
 
                 <!-- TANGGAL TRANSAKSI -->
                 <div class="form-group">
-                    <label>Tanggal Transaksi</label>
-                    <input type="text" id="displayTanggal" readonly>
+                    <label for="displayTanggal">Tanggal Transaksi <span class="req">*</span></label>
+                    <input type="date" id="displayTanggal" required>
                 </div>
 
                 <!-- SUBMIT BUTTON -->
@@ -430,13 +430,10 @@
             setupEventListeners();
         });
 
-        // Set Tanggal Hari Ini (Format Display ID: DD/MM/YYYY, Format Firebase: YYYY-MM-DD)
+        // Set default Tanggal Transaksi = hari ini (format ISO YYYY-MM-DD, sesuai kebutuhan input type="date").
+        // User tetap bisa mengubah nilai ini secara manual lewat date picker.
         function initDateDisplay() {
-            const today = new Date();
-            const day = String(today.getDate()).padStart(2, '0');
-            const month = String(today.getMonth() + 1).padStart(2, '0');
-            const year = today.getFullYear();
-            document.getElementById("displayTanggal").value = `${day}/${month}/${year}`;
+            document.getElementById("displayTanggal").value = getTodayISOString();
         }
 
         function getTodayISOString() {
@@ -472,7 +469,7 @@
             } catch (error) {
                 console.error("Firebase Error:", error);
                 updateConnectionStatus(false);
-                showAlert("⚠ Firebase tidak dapat diakses atau koneksi terputus.", "error");
+                showAlert("âš  Firebase tidak dapat diakses atau koneksi terputus.", "error");
             } finally {
                 showLoading(false);
             }
@@ -590,7 +587,7 @@
             const itemRecords = stockData.filter(d => d.itemnumber === itemCode);
 
             if (itemRecords.length === 0) {
-                showAlert(`⚠ ITEM TIDAK DITEMUKAN<br><br>Item Code: <b>${escapeHtml(itemCode)}</b><br>Data item tidak ditemukan di Firebase. Silakan periksa QR atau Item Code.`, "error");
+                showAlert(`âš  ITEM TIDAK DITEMUKAN<br><br>Item Code: <b>${escapeHtml(itemCode)}</b><br>Data item tidak ditemukan di Firebase. Silakan periksa QR atau Item Code.`, "error");
                 document.getElementById("itemName").value = "";
                 document.getElementById("batchInput").value = "";
                 document.getElementById("batchInfo").innerText = "";
@@ -708,7 +705,7 @@
             // atau HTTP biasa (bukan HTTPS), tanpa menampilkan dialog izin sama sekali.
             if (!window.isSecureContext) {
                 showAlert(
-                    "⚠ AKSES KAMERA DIBLOKIR BROWSER<br><br>" +
+                    "âš  AKSES KAMERA DIBLOKIR BROWSER<br><br>" +
                     "Halaman ini dibuka langsung dari file (file://) atau HTTP biasa. " +
                     "Untuk alasan keamanan, browser hanya mengizinkan akses kamera jika halaman " +
                     "diakses lewat <b>HTTPS</b> atau <b>localhost</b>.<br><br>" +
@@ -722,7 +719,7 @@
 
             // 2. Cek apakah browser mendukung getUserMedia sama sekali
             if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                showAlert("⚠ Browser tidak mendukung akses kamera (getUserMedia tidak tersedia).", "error");
+                showAlert("âš  Browser tidak mendukung akses kamera (getUserMedia tidak tersedia).", "error");
                 return;
             }
 
@@ -769,7 +766,7 @@
             const msg = (err && err.message) ? err.message : String(err);
 
             if (name === "NotAllowedError" || /Permission denied/i.test(msg)) {
-                return "⚠ IZIN KAMERA DITOLAK<br><br>" +
+                return "âš  IZIN KAMERA DITOLAK<br><br>" +
                     "Kamu (atau browser) menolak izin kamera untuk halaman ini.<br><br>" +
                     "<b>Cara memperbaiki:</b><br>" +
                     "1. Klik ikon gembok/kamera di address bar browser<br>" +
@@ -777,15 +774,15 @@
                     "3. Reload halaman ini, lalu coba SCAN QR lagi";
             }
             if (name === "NotFoundError" || name === "OverconstrainedError") {
-                return "⚠ KAMERA TIDAK DITEMUKAN<br><br>Perangkat ini tidak memiliki kamera yang bisa diakses, atau kamera belakang tidak tersedia.";
+                return "âš  KAMERA TIDAK DITEMUKAN<br><br>Perangkat ini tidak memiliki kamera yang bisa diakses, atau kamera belakang tidak tersedia.";
             }
             if (name === "NotReadableError") {
-                return "⚠ KAMERA SEDANG DIPAKAI APLIKASI LAIN<br><br>Tutup aplikasi/tab lain yang mungkin sedang menggunakan kamera, lalu coba lagi.";
+                return "âš  KAMERA SEDANG DIPAKAI APLIKASI LAIN<br><br>Tutup aplikasi/tab lain yang mungkin sedang menggunakan kamera, lalu coba lagi.";
             }
             if (name === "SecurityError") {
-                return "⚠ AKSES KAMERA DIBLOKIR (Security Error)<br><br>Pastikan halaman diakses lewat HTTPS atau localhost, bukan file:// atau HTTP biasa.";
+                return "âš  AKSES KAMERA DIBLOKIR (Security Error)<br><br>Pastikan halaman diakses lewat HTTPS atau localhost, bukan file:// atau HTTP biasa.";
             }
-            return `⚠ Kamera tidak dapat diakses.<br><br>Detail: ${escapeHtml(msg)}`;
+            return `âš  Kamera tidak dapat diakses.<br><br>Detail: ${escapeHtml(msg)}`;
         }
 
         function onScanSuccess(decodedText) {
@@ -829,22 +826,27 @@
             const qty = parseFloat(qtyStr);
             const remark = document.getElementById("remarkInput").value.trim();
             const posisi = document.getElementById("posisiInput").value.trim();
+            const tanggalTransaksi = document.getElementById("displayTanggal").value; // sudah format ISO YYYY-MM-DD dari input type="date"
 
             /* VALIDATION */
+            if (!tanggalTransaksi) {
+                showAlert("âš  Tanggal transaksi wajib diisi.", "error");
+                return;
+            }
             if (!itemCode) {
-                showAlert("⚠ Item Code belum dipilih.", "error");
+                showAlert("âš  Item Code belum dipilih.", "error");
                 return;
             }
             if (!itemName) {
-                showAlert("⚠ Data Item Desc kosong. Pastikan Item Code valid.", "error");
+                showAlert("âš  Data Item Desc kosong. Pastikan Item Code valid.", "error");
                 return;
             }
             if (!batch) {
-                showAlert("⚠ Batch tidak boleh kosong.", "error");
+                showAlert("âš  Batch tidak boleh kosong.", "error");
                 return;
             }
             if (isNaN(qty) || qty <= 0) {
-                showAlert("⚠ Qty harus berupa angka dan lebih besar dari 0.", "error");
+                showAlert("âš  Qty harus berupa angka dan lebih besar dari 0.", "error");
                 return;
             }
 
@@ -856,8 +858,8 @@
                 remark: remark || "",
                 posisi: posisi || "",
                 stok: qty,
-                tanggal: getTodayISOString(),
-                uploaded_at: new Date().toISOString()
+                tanggal: tanggalTransaksi, // tanggal transaksi yang DIPILIH user, bukan selalu hari ini
+                uploaded_at: new Date().toISOString() // waktu aktual data dikirim ke Firebase
             };
 
             // Lock Submit & Loading UI
@@ -875,7 +877,7 @@
                 });
 
                 // Notifikasi Berhasil
-                showAlert(`✓ DATA BERHASIL DISIMPAN<br><br>Item: <b>${escapeHtml(itemCode)}</b><br>Batch: <b>${escapeHtml(batch)}</b><br>Qty: <b>${qty}</b>`, "success");
+                showAlert(`âœ“ DATA BERHASIL DISIMPAN<br><br>Item: <b>${escapeHtml(itemCode)}</b><br>Batch: <b>${escapeHtml(batch)}</b><br>Qty: <b>${qty}</b>`, "success");
 
                 // Reset Field Input Form Saja
                 document.getElementById("qtyInput").value = "";
@@ -888,7 +890,7 @@
 
             } catch (error) {
                 console.error("Save Error:", error);
-                showAlert("⚠ Gagal menyimpan data ke Firebase. Periksa koneksi internet.", "error");
+                showAlert("âš  Gagal menyimpan data ke Firebase. Periksa koneksi internet.", "error");
             } finally {
                 isSaving = false;
                 document.getElementById("btnSave").disabled = false;
