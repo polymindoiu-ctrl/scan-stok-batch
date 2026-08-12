@@ -608,64 +608,91 @@
             processBatchSelection(itemRecords);
         }
 
-        /* REVISI LOGIKA BATCH (30 HARI TERAKHIR) */
-        function processBatchSelection(itemRecords) {
-            const today = new Date();
-            const thirtyDaysAgo = new Date();
-            thirtyDaysAgo.setDate(today.getDate() - 30);
-            const limitDateStr = thirtyDaysAgo.toISOString().split('T')[0];
+        /* REVISI PERBAIKAN LOGIKA BATCH (30 HARI TERAKHIR) */
+function processBatchSelection(itemRecords) {
+    // 1. Tentukan tanggal acuan (30 hari yang lalu dari hari ini)
+    const today = new Date();
+    today.setHours(23, 59, 59, 999); // Set ke akhir hari ini
+    
+    const thirtyDaysAgo = new Date(today);
+    thirtyDaysAgo.setDate(today.getDate() - 30);
+    thirtyDaysAgo.setHours(0, 0, 0, 0); // Set ke awal hari 30 hari lalu
 
-            // 1. Filter item dalam 30 hari terakhir
-            const recentRecords = itemRecords.filter(r => r.tanggal && r.tanggal >= limitDateStr && r.batch);
-
-            if (recentRecords.length === 0) {
-                document.getElementById("batchInput").value = "";
-                document.getElementById("batchInfo").innerText = "Tidak ada batch untuk Item Code ini dalam 30 hari terakhir. Batch dapat diinput secara manual.";
-                document.getElementById("batchInfo").style.color = "var(--warning-color)";
-                return;
-            }
-
-            // 2. Kelompokkan batch dan cari kemunculan/tanggal terakhirnya
-            const batchMap = new Map();
-            recentRecords.forEach(r => {
-                const b = r.batch.trim();
-                const recordDate = r.tanggal;
-                const uploadedAt = r.uploaded_at || "";
-
-                if (!batchMap.has(b)) {
-                    batchMap.set(b, { tanggal: recordDate, uploaded_at: uploadedAt, record: r });
-                } else {
-                    const existing = batchMap.get(b);
-                    // Bandingkan tanggal untuk mencari yang paling baru
-                    if (recordDate > existing.tanggal) {
-                        batchMap.set(b, { tanggal: recordDate, uploaded_at: uploadedAt, record: r });
-                    } else if (recordDate === existing.tanggal && uploadedAt > existing.uploaded_at) {
-                        batchMap.set(b, { tanggal: recordDate, uploaded_at: uploadedAt, record: r });
-                    }
-                }
-            });
-
-            // 3. Urutkan batch unik berdasarkan kemunculan terakhir (Terbaru ke Terlama)
-            const sortedBatches = Array.from(batchMap.entries()).sort((a, b) => {
-                if (b[1].tanggal !== a[1].tanggal) {
-                    return b[1].tanggal.localeCompare(a[1].tanggal);
-                }
-                return b[1].uploaded_at.localeCompare(a[1].uploaded_at);
-            });
-
-            // 4. Set Default Batch dengan Batch Paling Barus
-            const defaultBatch = sortedBatches[0][0];
-            const latestInfo = sortedBatches[0][1].record;
-
-            document.getElementById("batchInput").value = defaultBatch;
-
-            // Simpan list batch terurut untuk dropdown
-            window.currentSortedBatches = sortedBatches.map(item => item[0]);
-
-            // Tampilkan informasi batch terakhir
-            document.getElementById("batchInfo").innerText = `Batch ditemukan dari data 30 hari terakhir. (Terakhir: ${formatDisplayDate(latestInfo.tanggal)}, Stok: ${latestInfo.stok}, Remark: ${latestInfo.remark || '-'})`;
-            document.getElementById("batchInfo").style.color = "var(--text-muted)";
+    // Helper untuk konversi aman string "YYYY-MM-DD" ke objek Date
+    function parseRecordDate(dateStr) {
+        if (!dateStr) return null;
+        const parts = String(dateStr).trim().split('-');
+        if (parts.length === 3) {
+            const y = parseInt(parts[0], 10);
+            const m = parseInt(parts[1], 10) - 1; // Month 0-indexed
+            const d = parseInt(parts[2], 10);
+            return new Date(y, m, d);
         }
+        return null;
+    }
+
+    // 2. Filter item dalam 30 hari terakhir dengan parsing Date aman
+    const recentRecords = itemRecords.filter(r => {
+        if (!r.batch) return false;
+        const recDate = parseRecordDate(r.tanggal);
+        return recDate && recDate >= thirtyDaysAgo && recDate <= today;
+    });
+
+    // Jika tidak ada batch dalam 30 hari terakhir, ambil batch terbaru dari seluruh data historical (fallback)
+    const recordsToProcess = recentRecords.length > 0 ? recentRecords : itemRecords.filter(r => r.batch);
+
+    if (recordsToProcess.length === 0) {
+        document.getElementById("batchInput").value = "";
+        document.getElementById("batchInfo").innerText = "Tidak ada data batch untuk Item Code ini. Silakan isi batch secara manual.";
+        document.getElementById("batchInfo").style.color = "var(--warning-color)";
+        window.currentSortedBatches = [];
+        return;
+    }
+
+    // 3. Kelompokkan batch dan cari kemunculan/tanggal terakhirnya
+    const batchMap = new Map();
+    recordsToProcess.forEach(r => {
+        const b = String(r.batch).trim();
+        if (!b) return;
+
+        const recordDateStr = String(r.tanggal || "");
+        const uploadedAt = String(r.uploaded_at || "");
+
+        if (!batchMap.has(b)) {
+            batchMap.set(b, { tanggal: recordDateStr, uploaded_at: uploadedAt, record: r });
+        } else {
+            const existing = batchMap.get(b);
+            if (recordDateStr > existing.tanggal) {
+                batchMap.set(b, { tanggal: recordDateStr, uploaded_at: uploadedAt, record: r });
+            } else if (recordDateStr === existing.tanggal && uploadedAt > existing.uploaded_at) {
+                batchMap.set(b, { tanggal: recordDateStr, uploaded_at: uploadedAt, record: r });
+            }
+        }
+    });
+
+    // 4. Urutkan batch unik berdasarkan kemunculan terakhir (Terbaru ke Terlama)
+    const sortedBatches = Array.from(batchMap.entries()).sort((a, b) => {
+        if (b[1].tanggal !== a[1].tanggal) {
+            return b[1].tanggal.localeCompare(a[1].tanggal);
+        }
+        return b[1].uploaded_at.localeCompare(a[1].uploaded_at);
+    });
+
+    // 5. Set Default Batch & Tampilkan Informasi
+    const defaultBatch = sortedBatches[0][0];
+    const latestInfo = sortedBatches[0][1].record;
+
+    document.getElementById("batchInput").value = defaultBatch;
+    window.currentSortedBatches = sortedBatches.map(item => item[0]);
+
+    if (recentRecords.length > 0) {
+        document.getElementById("batchInfo").innerText = `Batch ditemukan dari data 30 hari terakhir. (Terakhir: ${formatDisplayDate(latestInfo.tanggal)}, Stok: ${latestInfo.stok}, Remark: ${latestInfo.remark || '-'})`;
+        document.getElementById("batchInfo").style.color = "var(--text-muted)";
+    } else {
+        document.getElementById("batchInfo").innerText = `Tidak ada batch dalam 30 hari terakhir. Menggunakan batch terakhir historical: ${defaultBatch}`;
+        document.getElementById("batchInfo").style.color = "var(--warning-color)";
+    }
+}
 
         function showBatchSuggestions() {
             if (!window.currentSortedBatches || window.currentSortedBatches.length === 0) return;
