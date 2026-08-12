@@ -487,6 +487,7 @@
                     <thead>
                         <tr>
                             <th>Jam</th>
+                            <th>Item Name</th>                            
                             <th>Item Code</th>
                             <th>Batch</th>
                             <th>Qty</th>
@@ -973,6 +974,7 @@
                     <tr>
                         <td>${timeStr}</td>
                         <td><b>${escapeHtml(item.itemnumber)}</b></td>
+                        <td><b>${escapeHtml(item.itemname)}</b></td>
                         <td>${escapeHtml(item.batch)}</td>
                         <td style="color: var(--success-color); font-weight:700;">+${item.stok}</td>
                         <td>${escapeHtml(item.posisi || '-')}</td>
