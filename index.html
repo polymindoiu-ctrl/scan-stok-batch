@@ -205,7 +205,7 @@
             background: white;
             border: 1px solid var(--border-color);
             border-radius: 0 0 var(--radius) var(--radius);
-            max-height: 200px;
+            max-height: 220px;
             overflow-y: auto;
             z-index: 100;
             box-shadow: var(--shadow);
@@ -225,11 +225,12 @@
         .suggestion-item .item-code {
             font-weight: 600;
             font-size: 0.9rem;
+            color: var(--primary-color);
         }
 
         .suggestion-item .item-desc {
-            font-size: 0.8rem;
-            color: var(--text-muted);
+            font-size: 0.85rem;
+            color: var(--text-main);
         }
 
         /* QR SCANNER CONTAINER */
@@ -423,10 +424,12 @@
                     <div id="itemSuggestions" class="suggestions-list"></div>
                 </div>
 
-                <!-- ITEM DESC -->
+                <!-- ITEM DESC (DIBUKA UNTUK INPUT MANUAL & AUTOCOMPLETE API) -->
                 <div class="form-group">
-                    <label for="itemName">Item Desc</label>
-                    <input type="text" id="itemName" readonly placeholder="Otomatis terisi...">
+                    <label for="itemName">Item Desc <span class="req">*</span></label>
+                    <input type="text" id="itemName" placeholder="Ketik deskripsi (contoh: *java*aged*)...">
+                    <div id="descSuggestions" class="suggestions-list"></div>
+                    <div class="info-text">Tips: Gunakan tanda bintang (*) untuk pencarian wildcard/kata terpisah.</div>
                 </div>
 
                 <!-- BATCH EDITABLE & SUGGESTION -->
@@ -526,9 +529,13 @@
         const FIREBASE_DB_URL = "https://ambil-data-dd0d1-default-rtdb.asia-southeast1.firebasedatabase.app";
         const DATA_PATH = "data_stok";
         const ENDPOINT_URL = `${FIREBASE_DB_URL}/${DATA_PATH}.json`;
+        
+        // API SCRIPT MASTER ITEM (Sumber Data Item Desc & Number)
+        const MASTER_API_URL = "https://script.google.com/macros/s/AKfycbyOZYxkl19Izb5LxnrrggkEgFEjqnlhXlfJGJN3Ld4VLuKvSIjgXlDIMkEI1dqwyH_M5g/exec";
 
         /* STATE MANAGEMENT */
-        let stockData = []; // Cache lokal data Firebase
+        let stockData = []; // Cache lokal data Firebase (Penyimpanan transaksi)
+        let masterItems = []; // Cache master item dari Apps Script API
         let html5QrCode = null;
         let isSaving = false;
         let selectedItemCode = "";
@@ -537,6 +544,7 @@
         document.addEventListener("DOMContentLoaded", () => {
             initDateDisplay();
             fetchFirebaseData();
+            fetchMasterItems();
             setupEventListeners();
         });
 
@@ -555,6 +563,26 @@
             const month = String(today.getMonth() + 1).padStart(2, '0');
             const day = String(today.getDate()).padStart(2, '0');
             return `${year}-${month}-${day}`;
+        }
+
+        /* MASTER ITEMS API FETCH (GOOGLE APPS SCRIPT) */
+        async function fetchMasterItems() {
+            try {
+                const response = await fetch(MASTER_API_URL);
+                if (!response.ok) throw new Error("Gagal mengambil master item.");
+                const data = await response.json();
+                
+                // Normalisasi struktur data API
+                if (Array.isArray(data)) {
+                    masterItems = data;
+                } else if (data.data && Array.isArray(data.data)) {
+                    masterItems = data.data;
+                } else {
+                    masterItems = Object.values(data);
+                }
+            } catch (error) {
+                console.error("Master API Error:", error);
+            }
         }
 
         /* FIREBASE API FUNCTIONS */
@@ -621,17 +649,28 @@
 
         /* EVENT LISTENERS SETUP */
         function setupEventListeners() {
+            // Event Listener Item Code
             const itemCodeInput = document.getElementById("itemCode");
             itemCodeInput.addEventListener("input", handleItemCodeInput);
             itemCodeInput.addEventListener("focus", handleItemCodeInput);
 
+            // Event Listener Item Name / Item Desc (Fitur Autocomplete Wildcard)
+            const itemNameInput = document.getElementById("itemName");
+            itemNameInput.addEventListener("input", handleItemNameInput);
+            itemNameInput.addEventListener("focus", handleItemNameInput);
+
+            // Event Listener Batch
             const batchInput = document.getElementById("batchInput");
             batchInput.addEventListener("focus", showBatchSuggestions);
             batchInput.addEventListener("input", checkCustomBatchInput);
 
+            // Hide Suggestions List Saat Klik di Luar Element
             document.addEventListener("click", (e) => {
                 if (!e.target.closest("#itemCode") && !e.target.closest("#itemSuggestions")) {
                     hideElement("itemSuggestions");
+                }
+                if (!e.target.closest("#itemName") && !e.target.closest("#descSuggestions")) {
+                    hideElement("descSuggestions");
                 }
                 if (!e.target.closest("#batchInput") && !e.target.closest("#batchSuggestions")) {
                     hideElement("batchSuggestions");
@@ -644,7 +683,44 @@
             document.getElementById("btnResetAll").addEventListener("click", resetFullForm);
         }
 
-        /* AUTOCOMPLETE & ITEM SEARCH LOGIC */
+        /* LOGIKA HELPER MENDAPATKAN ITEM DARI SOURCE (COMBINED API MASTER + FIREBASE) */
+        function getAllKnownItems() {
+            const map = new Map();
+
+            // 1. Dari Master API
+            masterItems.forEach(item => {
+                const code = item.itemnumber || item.item_code || item.code || item.ItemNumber || "";
+                const name = item.itemname || item.item_desc || item.name || item.ItemName || "";
+                if (code) {
+                    map.set(String(code).trim(), String(name).trim());
+                }
+            });
+
+            // 2. Dari Historical Data Firebase
+            stockData.forEach(item => {
+                if (item.itemnumber && !map.has(item.itemnumber)) {
+                    map.set(String(item.itemnumber).trim(), String(item.itemname || "").trim());
+                }
+            });
+
+            return Array.from(map.entries()).map(([code, name]) => ({ code, name }));
+        }
+
+        /* AUTOCOMPLETE UTILS: WILDCARD SEARCH (Mendukung pola *java*aged*) */
+        function matchWildcardPattern(text, pattern) {
+            if (!pattern) return true;
+            
+            // Mengubah input wildcard seperti *java*aged* menjadi regex regex pattern
+            // Pisahkan kata berdasarkan tanda * atau spasi
+            const keywords = pattern.toLowerCase().split(/[\s*]+/).filter(k => k.length > 0);
+            
+            if (keywords.length === 0) return true;
+
+            const target = text.toLowerCase();
+            return keywords.every(kw => target.includes(kw));
+        }
+
+        /* AUTOCOMPLETE PADA ITEM CODE */
         function handleItemCodeInput(e) {
             const query = e.target.value.trim().toLowerCase();
             const suggestionsContainer = document.getElementById("itemSuggestions");
@@ -655,58 +731,84 @@
                 return;
             }
 
-            const uniqueItemsMap = new Map();
-            stockData.forEach(item => {
-                if (item.itemnumber && item.itemnumber.toLowerCase().includes(query)) {
-                    if (!uniqueItemsMap.has(item.itemnumber)) {
-                        uniqueItemsMap.set(item.itemnumber, item.itemname || "");
-                    }
-                }
-            });
+            const items = getAllKnownItems();
+            const filtered = items.filter(item => item.code.toLowerCase().includes(query)).slice(0, 10);
 
-            const suggestions = Array.from(uniqueItemsMap.entries()).slice(0, 10);
-
-            if (suggestions.length === 0) {
-                suggestionsContainer.innerHTML = `<div class="suggestion-item"><em>Item tidak ditemukan</em></div>`;
+            if (filtered.length === 0) {
+                suggestionsContainer.innerHTML = `<div class="suggestion-item"><em>Item Code tidak ditemukan</em></div>`;
                 showElement("itemSuggestions");
                 return;
             }
 
-            suggestionsContainer.innerHTML = suggestions.map(([code, name]) => `
-                <div class="suggestion-item" onclick="selectItem('${escapeHtml(code)}')">
-                    <div class="item-code">${escapeHtml(code)}</div>
-                    <div class="item-desc">${escapeHtml(name)}</div>
+            suggestionsContainer.innerHTML = filtered.map(item => `
+                <div class="suggestion-item" onclick="selectItemFromCode('${escapeHtml(item.code)}')">
+                    <div class="item-code">${escapeHtml(item.code)}</div>
+                    <div class="item-desc">${escapeHtml(item.name)}</div>
                 </div>
             `).join("");
 
             showElement("itemSuggestions");
         }
 
-        function selectItem(itemCode) {
+        /* AUTOCOMPLETE PADA ITEM DESC (UNTUK WILDCARD / KATA TERPISAH) */
+        function handleItemNameInput(e) {
+            const query = e.target.value.trim();
+            const suggestionsContainer = document.getElementById("descSuggestions");
+
+            if (!query) {
+                suggestionsContainer.innerHTML = "";
+                hideElement("descSuggestions");
+                return;
+            }
+
+            const items = getAllKnownItems();
+            const filtered = items.filter(item => matchWildcardPattern(item.name, query)).slice(0, 12);
+
+            if (filtered.length === 0) {
+                suggestionsContainer.innerHTML = `<div class="suggestion-item"><em>Deskripsi item tidak ditemukan</em></div>`;
+                showElement("descSuggestions");
+                return;
+            }
+
+            suggestionsContainer.innerHTML = filtered.map(item => `
+                <div class="suggestion-item" onclick="selectItemFromDesc('${escapeHtml(item.code)}', '${escapeHtml(item.name)}')">
+                    <div class="item-desc">${escapeHtml(item.name)}</div>
+                    <div class="item-code">Code: ${escapeHtml(item.code)}</div>
+                </div>
+            `).join("");
+
+            showElement("descSuggestions");
+        }
+
+        /* PILIH DARI AUTOCOMPLETE ITEM CODE */
+        function selectItemFromCode(itemCode) {
             document.getElementById("itemCode").value = itemCode;
             hideElement("itemSuggestions");
             processSelectedItem(itemCode);
         }
 
-        function processSelectedItem(itemCode) {
+        /* PILIH DARI AUTOCOMPLETE ITEM DESC */
+        function selectItemFromDesc(itemCode, itemName) {
+            document.getElementById("itemCode").value = itemCode;
+            document.getElementById("itemName").value = itemName;
+            hideElement("descSuggestions");
+            processSelectedItem(itemCode, itemName);
+        }
+
+        function processSelectedItem(itemCode, providedName = null) {
             selectedItemCode = itemCode;
             
-            const itemRecords = stockData.filter(d => d.itemnumber === itemCode);
+            const items = getAllKnownItems();
+            const matched = items.find(i => i.code === itemCode);
 
-            if (itemRecords.length === 0) {
-                showAlert(`⚠ ITEM TIDAK DITEMUKAN<br><br>Item Code: <b>${escapeHtml(itemCode)}</b><br>Data item tidak ditemukan di Firebase. Silakan periksa QR atau Item Code.`, "error");
-                document.getElementById("itemName").value = "";
-                document.getElementById("batchInput").value = "";
-                document.getElementById("batchInfo").innerText = "";
-                setFormInputsEnabled(false);
-                return;
-            }
-
-            const itemName = itemRecords[0].itemname || "-";
+            const itemName = providedName || (matched ? matched.name : "-");
             document.getElementById("itemName").value = itemName;
+            
             showAlert("", "hide");
             setFormInputsEnabled(true);
 
+            // Ambil histori record dari Firebase untuk pencarian batch
+            const itemRecords = stockData.filter(d => d.itemnumber === itemCode);
             processBatchSelection(itemRecords);
         }
 
@@ -741,7 +843,7 @@
 
             if (recordsToProcess.length === 0) {
                 document.getElementById("batchInput").value = "";
-                document.getElementById("batchInfo").innerText = "Tidak ada data batch untuk Item Code ini. Silakan isi batch secara manual.";
+                document.getElementById("batchInfo").innerText = "Tidak ada riwayat batch untuk Item ini. Silakan ketik batch secara manual.";
                 document.getElementById("batchInfo").style.color = "var(--warning-color)";
                 window.currentSortedBatches = [];
                 return;
@@ -781,10 +883,10 @@
             window.currentSortedBatches = sortedBatches.map(item => item[0]);
 
             if (recentRecords.length > 0) {
-                document.getElementById("batchInfo").innerText = `Batch ditemukan dari data 30 hari terakhir. (Terakhir: ${formatDisplayDate(latestInfo.tanggal)}, Stok: ${latestInfo.stok}, Remark: ${latestInfo.remark || '-'})`;
+                document.getElementById("batchInfo").innerText = `Batch ditemukan dari data 30 hari terakhir. (Terakhir: ${formatDisplayDate(latestInfo.tanggal)}, Stok: ${latestInfo.stok})`;
                 document.getElementById("batchInfo").style.color = "var(--text-muted)";
             } else {
-                document.getElementById("batchInfo").innerText = `Tidak ada batch dalam 30 hari terakhir. Menggunakan batch terakhir historical: ${defaultBatch}`;
+                document.getElementById("batchInfo").innerText = `Menggunakan batch historical: ${defaultBatch}`;
                 document.getElementById("batchInfo").style.color = "var(--warning-color)";
             }
         }
@@ -813,10 +915,10 @@
             const batchInfo = document.getElementById("batchInfo");
 
             if (window.currentSortedBatches && window.currentSortedBatches.includes(currentVal)) {
-                batchInfo.innerText = "Batch ditemukan dari data 30 hari terakhir.";
+                batchInfo.innerText = "Batch ditemukan dari histori.";
                 batchInfo.style.color = "var(--text-muted)";
             } else if (currentVal !== "") {
-                batchInfo.innerText = "Batch baru / tidak ditemukan dalam 30 hari terakhir.";
+                batchInfo.innerText = "Batch baru.";
                 batchInfo.style.color = "var(--warning-color)";
             } else {
                 batchInfo.innerText = "";
@@ -884,11 +986,11 @@
             const posisi = document.getElementById("posisiInput").value.trim();
 
             if (!itemCode) {
-                showAlert("⚠ Item Code belum dipilih.", "error");
+                showAlert("⚠ Item Code belum diisi.", "error");
                 return;
             }
             if (!itemName) {
-                showAlert("⚠ Data Item Desc kosong. Pastikan Item Code valid.", "error");
+                showAlert("⚠ Item Desc belum diisi.", "error");
                 return;
             }
             if (!batch) {
@@ -923,9 +1025,9 @@
                     ...payload
                 });
 
-                showAlert(`✓ DATA BERHASIL DISIMPAN<br><br>Item: <b>${escapeHtml(itemCode)}</b><br>Batch: <b>${escapeHtml(batch)}</b><br>Qty: <b>${qty}</b>`, "success");
+                showAlert(`✓ DATA BERHASIL DISIMPAN<br><br>Item: <b>${escapeHtml(itemCode)}</b><br>Desc: <b>${escapeHtml(itemName)}</b><br>Batch: <b>${escapeHtml(batch)}</b><br>Qty: <b>${qty}</b>`, "success");
 
-                // Reset Field Input Form
+                // Reset Input Form
                 document.getElementById("qtyInput").value = "";
                 document.getElementById("remarkInput").value = "";
                 document.getElementById("posisiInput").value = "";
@@ -972,8 +1074,8 @@
                 return `
                     <tr>
                         <td>${timeStr}</td>
-                        <td><b>${escapeHtml(item.itemnumber)}</b></td>
                         <td><b>${escapeHtml(item.itemname)}</b></td>
+                        <td><b>${escapeHtml(item.itemnumber)}</b></td>
                         <td>${escapeHtml(item.batch)}</td>
                         <td style="color: var(--success-color); font-weight:700;">+${item.stok}</td>
                         <td>${escapeHtml(item.remark || '-')}</td>
@@ -985,7 +1087,6 @@
         /* FORM RESET HELPERS */
         function resetFullForm() {
             document.getElementById("stockForm").reset();
-            document.getElementById("itemName").value = "";
             document.getElementById("batchInfo").innerText = "";
             initDateDisplay();
             selectedItemCode = "";
