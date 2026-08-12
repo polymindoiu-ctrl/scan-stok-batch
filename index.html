@@ -1,0 +1,966 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Batch Input</title>
+    
+    <!-- HTML5-QRCode CDN untuk Scanner QR -->
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
+    <!-- CSS STYLES -->
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --primary-hover: #1d4ed8;
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border-color: #cbd5e1;
+            --success-color: #16a34a;
+            --error-color: #dc2626;
+            --warning-color: #d97706;
+            --radius: 8px;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            padding: 12px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 500px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        /* HEADER */
+        header {
+            background-color: var(--card-bg);
+            padding: 16px;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .brand h1 {
+            font-size: 1.25rem;
+            color: var(--primary-color);
+            font-weight: 700;
+        }
+
+        .brand p {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .status-badge {
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 4px 10px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .status-online {
+            background-color: #dcfce7;
+            color: #15803d;
+        }
+
+        .status-offline {
+            background-color: #fee2e2;
+            color: #b91c1c;
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .dot-online { background-color: var(--success-color); }
+        .dot-offline { background-color: var(--error-color); }
+
+        /* CARDS */
+        .card {
+            background: var(--card-bg);
+            padding: 16px;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+        }
+
+        /* BUTTONS */
+        .btn {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: var(--radius);
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--primary-hover);
+        }
+
+        .btn-secondary {
+            background-color: #e2e8f0;
+            color: var(--text-main);
+        }
+
+        .btn-secondary:hover {
+            background-color: #cbd5e1;
+        }
+
+        .btn-danger {
+            background-color: var(--error-color);
+            color: white;
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        /* FORM ELEMENTS */
+        .form-group {
+            margin-bottom: 14px;
+            position: relative;
+        }
+
+        label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: var(--text-main);
+        }
+
+        label span.req {
+            color: var(--error-color);
+        }
+
+        input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            font-size: 0.95rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        input:focus {
+            border-color: var(--primary-color);
+        }
+
+        input[readonly] {
+            background-color: #f1f5f9;
+            color: #64748b;
+            cursor: not-allowed;
+        }
+
+        .info-text {
+            font-size: 0.75rem;
+            margin-top: 4px;
+            color: var(--text-muted);
+        }
+
+        /* AUTOCOMPLETE / DROPDOWN SUGGESTIONS */
+        .suggestions-list {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: 0 0 var(--radius) var(--radius);
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 100;
+            box-shadow: var(--shadow);
+            display: none;
+        }
+
+        .suggestion-item {
+            padding: 10px 12px;
+            cursor: pointer;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .suggestion-item:hover {
+            background-color: #f8fafc;
+        }
+
+        .suggestion-item .item-code {
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .suggestion-item .item-desc {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        /* QR SCANNER CONTAINER */
+        #scanner-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            padding: 16px;
+        }
+
+        .scanner-box {
+            background: white;
+            width: 100%;
+            max-width: 400px;
+            border-radius: var(--radius);
+            padding: 16px;
+            text-align: center;
+        }
+
+        #reader {
+            width: 100%;
+            border-radius: var(--radius);
+            overflow: hidden;
+            margin-bottom: 12px;
+        }
+
+        /* ALERTS AND NOTIFICATIONS */
+        .alert {
+            padding: 12px;
+            border-radius: var(--radius);
+            font-size: 0.85rem;
+            margin-bottom: 14px;
+            display: none;
+        }
+
+        .alert-error {
+            background-color: #fef2f2;
+            color: var(--error-color);
+            border: 1px solid #fecaca;
+        }
+
+        .alert-success {
+            background-color: #f0fdf4;
+            color: var(--success-color);
+            border: 1px solid #bbf7d0;
+        }
+
+        .alert-warning {
+            background-color: #fffbeb;
+            color: var(--warning-color);
+            border: 1px solid #fef3c7;
+        }
+
+        /* ACTIONS */
+        .action-group {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        /* LOADING INDICATOR */
+        .loading-overlay {
+            display: none;
+            position: absolute;
+            top:0; left:0; right:0; bottom:0;
+            background: rgba(255, 255, 255, 0.7);
+            border-radius: var(--radius);
+            justify-content: center;
+            align-items: center;
+            font-weight: 600;
+            color: var(--primary-color);
+            z-index: 50;
+        }
+
+        .relative { position: relative; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- HEADER -->
+        <header>
+            <div class="brand">
+                <h1>STOCK BATCH</h1>
+                <p>Input Data Stok Firebase</p>
+            </div>
+            <div id="connectionStatus" class="status-badge status-offline">
+                <span class="dot dot-offline"></span> <span id="statusText">Checking...</span>
+            </div>
+        </header>
+
+        <!-- MAIN FORM CARD -->
+        <div class="card relative">
+            <div id="loadingOverlay" class="loading-overlay">
+                <span id="loadingText">Memuat Data...</span>
+            </div>
+
+            <!-- NOTIFICATION MESSAGES -->
+            <div id="alertBox" class="alert"></div>
+
+            <button type="button" id="btnScanQR" class="btn btn-primary" style="margin-bottom: 16px;">
+                📷 SCAN QR
+            </button>
+
+            <form id="stockForm" autocomplete="off" onsubmit="return false;">
+                <!-- ITEM CODE -->
+                <div class="form-group">
+                    <label for="itemCode">Item Code <span class="req">*</span></label>
+                    <input type="text" id="itemCode" placeholder="Ketik atau Scan QR..." required>
+                    <div id="itemSuggestions" class="suggestions-list"></div>
+                </div>
+
+                <!-- ITEM DESC -->
+                <div class="form-group">
+                    <label for="itemName">Item Desc</label>
+                    <input type="text" id="itemName" readonly placeholder="Otomatis terisi...">
+                </div>
+
+                <!-- BATCH EDITABLE & SUGGESTION -->
+                <div class="form-group">
+                    <label for="batchInput">Batch <span class="req">*</span></label>
+                    <input type="text" id="batchInput" placeholder="Pilih/Ketik Batch..." required>
+                    <div id="batchSuggestions" class="suggestions-list"></div>
+                    <div id="batchInfo" class="info-text"></div>
+                </div>
+
+                <!-- QTY -->
+                <div class="form-group">
+                    <label for="qtyInput">Qty <span class="req">*</span></label>
+                    <input type="number" id="qtyInput" step="any" min="0.01" placeholder="Masukkan jumlah stok" required>
+                </div>
+
+                <!-- REMARK -->
+                <div class="form-group">
+                    <label for="remarkInput">Remark</label>
+                    <input type="text" id="remarkInput" placeholder="Contoh: Palet 12 (opsional)">
+                </div>
+
+                <!-- POSISI -->
+                <div class="form-group">
+                    <label for="posisiInput">Posisi</label>
+                    <input type="text" id="posisiInput" placeholder="Contoh: Rak A1 (opsional)">
+                </div>
+
+                <!-- TANGGAL TRANSAKSI -->
+                <div class="form-group">
+                    <label>Tanggal Transaksi</label>
+                    <input type="text" id="displayTanggal" readonly>
+                </div>
+
+                <!-- SUBMIT BUTTON -->
+                <button type="button" id="btnSave" class="btn btn-primary" style="margin-top: 8px;">
+                    SIMPAN DATA
+                </button>
+
+                <div class="action-group">
+                    <button type="button" id="btnResetAll" class="btn btn-secondary">
+                        INPUT ITEM BARU
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- QR SCANNER MODAL -->
+    <div id="scanner-modal">
+        <div class="scanner-box">
+            <h3 style="margin-bottom: 12px;">Scan QR Item Code</h3>
+            <div id="reader"></div>
+            <button type="button" id="btnCloseScanner" class="btn btn-danger">TUTUP SCANNER</button>
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT APP LOGIC -->
+    <script>
+        /* CONFIGURATION */
+        const FIREBASE_DB_URL = "https://ambil-data-dd0d1-default-rtdb.asia-southeast1.firebasedatabase.app";
+        const DATA_PATH = "data_stok";
+        const ENDPOINT_URL = `${FIREBASE_DB_URL}/${DATA_PATH}.json`;
+
+        /* STATE MANAGEMENT */
+        let stockData = []; // Cache lokal data Firebase
+        let html5QrCode = null;
+        let isSaving = false;
+        let selectedItemCode = "";
+
+        /* INITIALIZATION */
+        document.addEventListener("DOMContentLoaded", () => {
+            initDateDisplay();
+            fetchFirebaseData();
+            setupEventListeners();
+        });
+
+        // Set Tanggal Hari Ini (Format Display ID: DD/MM/YYYY, Format Firebase: YYYY-MM-DD)
+        function initDateDisplay() {
+            const today = new Date();
+            const day = String(today.getDate()).padStart(2, '0');
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const year = today.getFullYear();
+            document.getElementById("displayTanggal").value = `${day}/${month}/${year}`;
+        }
+
+        function getTodayISOString() {
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        /* FIREBASE API FUNCTIONS */
+        async function fetchFirebaseData() {
+            showLoading(true, "Memuat data Firebase...");
+            try {
+                const response = await fetch(ENDPOINT_URL);
+                if (!response.ok) throw new Error("Gagal terhubung ke database.");
+                
+                const data = await response.json();
+                stockData = [];
+
+                if (data) {
+                    // Flatten object Firebase ke array
+                    Object.keys(data).forEach(key => {
+                        stockData.push({
+                            _id: key,
+                            ...data[key]
+                        });
+                    });
+                }
+
+                updateConnectionStatus(true);
+                showAlert("", "hide");
+            } catch (error) {
+                console.error("Firebase Error:", error);
+                updateConnectionStatus(false);
+                showAlert("⚠ Firebase tidak dapat diakses atau koneksi terputus.", "error");
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        async function saveStockToFirebase(payload) {
+            const response = await fetch(ENDPOINT_URL, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                throw new Error("Gagal mengirim data ke Firebase.");
+            }
+
+            return await response.json();
+        }
+
+        /* STATUS INDIKATOR */
+        function updateConnectionStatus(isOnline) {
+            const statusBadge = document.getElementById("connectionStatus");
+            const statusText = document.getElementById("statusText");
+            const dot = statusBadge.querySelector(".dot");
+
+            if (isOnline) {
+                statusBadge.className = "status-badge status-online";
+                dot.className = "dot dot-online";
+                statusText.innerText = "Online";
+            } else {
+                statusBadge.className = "status-badge status-offline";
+                dot.className = "dot dot-offline";
+                statusText.innerText = "Offline";
+            }
+        }
+
+        /* EVENT LISTENERS SETUP */
+        function setupEventListeners() {
+            // Autocomplete Item Code
+            const itemCodeInput = document.getElementById("itemCode");
+            itemCodeInput.addEventListener("input", handleItemCodeInput);
+            itemCodeInput.addEventListener("focus", handleItemCodeInput);
+
+            // Batch Input Suggestions
+            const batchInput = document.getElementById("batchInput");
+            batchInput.addEventListener("focus", showBatchSuggestions);
+            batchInput.addEventListener("input", checkCustomBatchInput);
+
+            // Global Click listener untuk menutup dropdown suggestion jika klik di luar
+            document.addEventListener("click", (e) => {
+                if (!e.target.closest("#itemCode") && !e.target.closest("#itemSuggestions")) {
+                    hideElement("itemSuggestions");
+                }
+                if (!e.target.closest("#batchInput") && !e.target.closest("#batchSuggestions")) {
+                    hideElement("batchSuggestions");
+                }
+            });
+
+            // Buttons
+            document.getElementById("btnScanQR").addEventListener("click", startQRScanner);
+            document.getElementById("btnCloseScanner").addEventListener("click", stopQRScanner);
+            document.getElementById("btnSave").addEventListener("click", handleSave);
+            document.getElementById("btnResetAll").addEventListener("click", resetFullForm);
+        }
+
+        /* AUTOCOMPLETE & ITEM SEARCH LOGIC */
+        function handleItemCodeInput(e) {
+            const query = e.target.value.trim().toLowerCase();
+            const suggestionsContainer = document.getElementById("itemSuggestions");
+
+            if (!query) {
+                suggestionsContainer.innerHTML = "";
+                hideElement("itemSuggestions");
+                return;
+            }
+
+            // Cari item unik berdasarkan itemnumber
+            const uniqueItemsMap = new Map();
+            stockData.forEach(item => {
+                if (item.itemnumber && item.itemnumber.toLowerCase().includes(query)) {
+                    if (!uniqueItemsMap.has(item.itemnumber)) {
+                        uniqueItemsMap.set(item.itemnumber, item.itemname || "");
+                    }
+                }
+            });
+
+            const suggestions = Array.from(uniqueItemsMap.entries()).slice(0, 10);
+
+            if (suggestions.length === 0) {
+                suggestionsContainer.innerHTML = `<div class="suggestion-item"><em>Item tidak ditemukan</em></div>`;
+                showElement("itemSuggestions");
+                return;
+            }
+
+            suggestionsContainer.innerHTML = suggestions.map(([code, name]) => `
+                <div class="suggestion-item" onclick="selectItem('${escapeHtml(code)}')">
+                    <div class="item-code">${escapeHtml(code)}</div>
+                    <div class="item-desc">${escapeHtml(name)}</div>
+                </div>
+            `).join("");
+
+            showElement("itemSuggestions");
+        }
+
+        function selectItem(itemCode) {
+            document.getElementById("itemCode").value = itemCode;
+            hideElement("itemSuggestions");
+            processSelectedItem(itemCode);
+        }
+
+        function processSelectedItem(itemCode) {
+            selectedItemCode = itemCode;
+            
+            // Filter data berdasarkan Item Code
+            const itemRecords = stockData.filter(d => d.itemnumber === itemCode);
+
+            if (itemRecords.length === 0) {
+                showAlert(`⚠ ITEM TIDAK DITEMUKAN<br><br>Item Code: <b>${escapeHtml(itemCode)}</b><br>Data item tidak ditemukan di Firebase. Silakan periksa QR atau Item Code.`, "error");
+                document.getElementById("itemName").value = "";
+                document.getElementById("batchInput").value = "";
+                document.getElementById("batchInfo").innerText = "";
+                setFormInputsEnabled(false);
+                return;
+            }
+
+            // Ambil Item Name dari record pertama yang ditemukan
+            const itemName = itemRecords[0].itemname || "-";
+            document.getElementById("itemName").value = itemName;
+            showAlert("", "hide");
+            setFormInputsEnabled(true);
+
+            // Proses Pencarian Batch Unik (30 Hari Terakhir)
+            processBatchSelection(itemRecords);
+        }
+
+        /* REVISI LOGIKA BATCH (30 HARI TERAKHIR) */
+        function processBatchSelection(itemRecords) {
+            const today = new Date();
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(today.getDate() - 30);
+            const limitDateStr = thirtyDaysAgo.toISOString().split('T')[0];
+
+            // 1. Filter item dalam 30 hari terakhir
+            const recentRecords = itemRecords.filter(r => r.tanggal && r.tanggal >= limitDateStr && r.batch);
+
+            if (recentRecords.length === 0) {
+                document.getElementById("batchInput").value = "";
+                document.getElementById("batchInfo").innerText = "Tidak ada batch untuk Item Code ini dalam 30 hari terakhir. Batch dapat diinput secara manual.";
+                document.getElementById("batchInfo").style.color = "var(--warning-color)";
+                return;
+            }
+
+            // 2. Kelompokkan batch dan cari kemunculan/tanggal terakhirnya
+            const batchMap = new Map();
+            recentRecords.forEach(r => {
+                const b = r.batch.trim();
+                const recordDate = r.tanggal;
+                const uploadedAt = r.uploaded_at || "";
+
+                if (!batchMap.has(b)) {
+                    batchMap.set(b, { tanggal: recordDate, uploaded_at: uploadedAt, record: r });
+                } else {
+                    const existing = batchMap.get(b);
+                    // Bandingkan tanggal untuk mencari yang paling baru
+                    if (recordDate > existing.tanggal) {
+                        batchMap.set(b, { tanggal: recordDate, uploaded_at: uploadedAt, record: r });
+                    } else if (recordDate === existing.tanggal && uploadedAt > existing.uploaded_at) {
+                        batchMap.set(b, { tanggal: recordDate, uploaded_at: uploadedAt, record: r });
+                    }
+                }
+            });
+
+            // 3. Urutkan batch unik berdasarkan kemunculan terakhir (Terbaru ke Terlama)
+            const sortedBatches = Array.from(batchMap.entries()).sort((a, b) => {
+                if (b[1].tanggal !== a[1].tanggal) {
+                    return b[1].tanggal.localeCompare(a[1].tanggal);
+                }
+                return b[1].uploaded_at.localeCompare(a[1].uploaded_at);
+            });
+
+            // 4. Set Default Batch dengan Batch Paling Barus
+            const defaultBatch = sortedBatches[0][0];
+            const latestInfo = sortedBatches[0][1].record;
+
+            document.getElementById("batchInput").value = defaultBatch;
+
+            // Simpan list batch terurut untuk dropdown
+            window.currentSortedBatches = sortedBatches.map(item => item[0]);
+
+            // Tampilkan informasi batch terakhir
+            document.getElementById("batchInfo").innerText = `Batch ditemukan dari data 30 hari terakhir. (Terakhir: ${formatDisplayDate(latestInfo.tanggal)}, Stok: ${latestInfo.stok}, Remark: ${latestInfo.remark || '-'})`;
+            document.getElementById("batchInfo").style.color = "var(--text-muted)";
+        }
+
+        function showBatchSuggestions() {
+            if (!window.currentSortedBatches || window.currentSortedBatches.length === 0) return;
+
+            const container = document.getElementById("batchSuggestions");
+            container.innerHTML = window.currentSortedBatches.map(b => `
+                <div class="suggestion-item" onclick="selectBatch('${escapeHtml(b)}')">
+                    <div class="item-code">${escapeHtml(b)}</div>
+                </div>
+            `).join("");
+
+            showElement("batchSuggestions");
+        }
+
+        function selectBatch(batchValue) {
+            document.getElementById("batchInput").value = batchValue;
+            hideElement("batchSuggestions");
+            checkCustomBatchInput();
+        }
+
+        function checkCustomBatchInput() {
+            const currentVal = document.getElementById("batchInput").value.trim();
+            const batchInfo = document.getElementById("batchInfo");
+
+            if (window.currentSortedBatches && window.currentSortedBatches.includes(currentVal)) {
+                batchInfo.innerText = "Batch ditemukan dari data 30 hari terakhir.";
+                batchInfo.style.color = "var(--text-muted)";
+            } else if (currentVal !== "") {
+                batchInfo.innerText = "Batch baru / tidak ditemukan dalam 30 hari terakhir.";
+                batchInfo.style.color = "var(--warning-color)";
+            } else {
+                batchInfo.innerText = "";
+            }
+        }
+
+        /* QR SCANNER INTEGRATION */
+        async function startQRScanner() {
+            // 1. Cek Secure Context (HTTPS/localhost). Browser modern MEMBLOKIR
+            // akses kamera total jika halaman dibuka langsung dari file (file://)
+            // atau HTTP biasa (bukan HTTPS), tanpa menampilkan dialog izin sama sekali.
+            if (!window.isSecureContext) {
+                showAlert(
+                    "⚠ AKSES KAMERA DIBLOKIR BROWSER<br><br>" +
+                    "Halaman ini dibuka langsung dari file (file://) atau HTTP biasa. " +
+                    "Untuk alasan keamanan, browser hanya mengizinkan akses kamera jika halaman " +
+                    "diakses lewat <b>HTTPS</b> atau <b>localhost</b>.<br><br>" +
+                    "<b>Solusi:</b> Upload file ini ke hosting (GitHub Pages, Netlify, Firebase Hosting, dll) " +
+                    "lalu buka lewat URL https://, atau jalankan lewat local server (contoh: extension " +
+                    "\"Live Server\" di VS Code) sehingga alamatnya menjadi http://localhost/...",
+                    "error"
+                );
+                return;
+            }
+
+            // 2. Cek apakah browser mendukung getUserMedia sama sekali
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                showAlert("⚠ Browser tidak mendukung akses kamera (getUserMedia tidak tersedia).", "error");
+                return;
+            }
+
+            showElement("scanner-modal");
+            if (!html5QrCode) {
+                html5QrCode = new Html5Qrcode("reader");
+            }
+
+            const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+
+            try {
+                // Prioritaskan kamera belakang
+                await html5QrCode.start(
+                    { facingMode: "environment" },
+                    config,
+                    onScanSuccess,
+                    onScanFailure
+                );
+            } catch (errBack) {
+                console.warn("Kamera belakang gagal, mencoba kamera default:", errBack);
+                // Fallback: coba kamera apa saja yang tersedia (misal laptop cuma punya 1 kamera depan)
+                try {
+                    const cameras = await Html5Qrcode.getCameras();
+                    if (!cameras || cameras.length === 0) {
+                        throw errBack;
+                    }
+                    await html5QrCode.start(
+                        cameras[0].id,
+                        config,
+                        onScanSuccess,
+                        onScanFailure
+                    );
+                } catch (err) {
+                    console.error("Camera access error:", err);
+                    stopQRScanner();
+                    showAlert(getCameraErrorMessage(err), "error");
+                }
+            }
+        }
+
+        // Terjemahkan error kamera jadi pesan yang jelas untuk user
+        function getCameraErrorMessage(err) {
+            const name = err && err.name ? err.name : "";
+            const msg = (err && err.message) ? err.message : String(err);
+
+            if (name === "NotAllowedError" || /Permission denied/i.test(msg)) {
+                return "⚠ IZIN KAMERA DITOLAK<br><br>" +
+                    "Kamu (atau browser) menolak izin kamera untuk halaman ini.<br><br>" +
+                    "<b>Cara memperbaiki:</b><br>" +
+                    "1. Klik ikon gembok/kamera di address bar browser<br>" +
+                    "2. Ubah izin Kamera menjadi <b>Allow/Izinkan</b><br>" +
+                    "3. Reload halaman ini, lalu coba SCAN QR lagi";
+            }
+            if (name === "NotFoundError" || name === "OverconstrainedError") {
+                return "⚠ KAMERA TIDAK DITEMUKAN<br><br>Perangkat ini tidak memiliki kamera yang bisa diakses, atau kamera belakang tidak tersedia.";
+            }
+            if (name === "NotReadableError") {
+                return "⚠ KAMERA SEDANG DIPAKAI APLIKASI LAIN<br><br>Tutup aplikasi/tab lain yang mungkin sedang menggunakan kamera, lalu coba lagi.";
+            }
+            if (name === "SecurityError") {
+                return "⚠ AKSES KAMERA DIBLOKIR (Security Error)<br><br>Pastikan halaman diakses lewat HTTPS atau localhost, bukan file:// atau HTTP biasa.";
+            }
+            return `⚠ Kamera tidak dapat diakses.<br><br>Detail: ${escapeHtml(msg)}`;
+        }
+
+        function onScanSuccess(decodedText) {
+            const itemCode = decodedText.trim();
+            stopQRScanner();
+
+            document.getElementById("itemCode").value = itemCode;
+            processSelectedItem(itemCode);
+
+            // Fokus otomatis ke Qty setelah scan berhasil
+            setTimeout(() => {
+                document.getElementById("qtyInput").focus();
+            }, 300);
+        }
+
+        function onScanFailure(error) {
+            // Callback terus berjalan ketika frame QR tidak terdeteksi (abaikan)
+        }
+
+        function stopQRScanner() {
+            if (html5QrCode && html5QrCode.isScanning) {
+                html5QrCode.stop().then(() => {
+                    hideElement("scanner-modal");
+                }).catch(err => {
+                    console.error("Failed to stop scanner", err);
+                    hideElement("scanner-modal");
+                });
+            } else {
+                hideElement("scanner-modal");
+            }
+        }
+
+        /* SAVE DATA LOGIC & VALIDATION */
+        async function handleSave() {
+            if (isSaving) return; // Prevent Double Submit
+
+            const itemCode = document.getElementById("itemCode").value.trim();
+            const itemName = document.getElementById("itemName").value.trim();
+            const batch = document.getElementById("batchInput").value.trim();
+            const qtyStr = document.getElementById("qtyInput").value;
+            const qty = parseFloat(qtyStr);
+            const remark = document.getElementById("remarkInput").value.trim();
+            const posisi = document.getElementById("posisiInput").value.trim();
+
+            /* VALIDATION */
+            if (!itemCode) {
+                showAlert("⚠ Item Code belum dipilih.", "error");
+                return;
+            }
+            if (!itemName) {
+                showAlert("⚠ Data Item Desc kosong. Pastikan Item Code valid.", "error");
+                return;
+            }
+            if (!batch) {
+                showAlert("⚠ Batch tidak boleh kosong.", "error");
+                return;
+            }
+            if (isNaN(qty) || qty <= 0) {
+                showAlert("⚠ Qty harus berupa angka dan lebih besar dari 0.", "error");
+                return;
+            }
+
+            // Payload Baru
+            const payload = {
+                batch: batch,
+                itemname: itemName,
+                itemnumber: itemCode,
+                remark: remark || "",
+                posisi: posisi || "",
+                stok: qty,
+                tanggal: getTodayISOString(),
+                uploaded_at: new Date().toISOString()
+            };
+
+            // Lock Submit & Loading UI
+            isSaving = true;
+            document.getElementById("btnSave").disabled = true;
+            showLoading(true, "Menyimpan data...");
+
+            try {
+                const response = await saveStockToFirebase(payload);
+                
+                // Tambahkan ke cache lokal secara langsung
+                stockData.push({
+                    _id: response.name,
+                    ...payload
+                });
+
+                // Notifikasi Berhasil
+                showAlert(`✓ DATA BERHASIL DISIMPAN<br><br>Item: <b>${escapeHtml(itemCode)}</b><br>Batch: <b>${escapeHtml(batch)}</b><br>Qty: <b>${qty}</b>`, "success");
+
+                // Reset Field Input Form Saja
+                document.getElementById("qtyInput").value = "";
+                document.getElementById("remarkInput").value = "";
+                document.getElementById("posisiInput").value = "";
+
+                // Refresh Data Batch 30 hari terakhir agar record baru terupdate di suggestion
+                const itemRecords = stockData.filter(d => d.itemnumber === itemCode);
+                processBatchSelection(itemRecords);
+
+            } catch (error) {
+                console.error("Save Error:", error);
+                showAlert("⚠ Gagal menyimpan data ke Firebase. Periksa koneksi internet.", "error");
+            } finally {
+                isSaving = false;
+                document.getElementById("btnSave").disabled = false;
+                showLoading(false);
+            }
+        }
+
+        /* FORM RESET HELPERS */
+        function resetFullForm() {
+            document.getElementById("stockForm").reset();
+            document.getElementById("itemName").value = "";
+            document.getElementById("batchInfo").innerText = "";
+            initDateDisplay();
+            selectedItemCode = "";
+            window.currentSortedBatches = [];
+            setFormInputsEnabled(true);
+            showAlert("", "hide");
+            document.getElementById("itemCode").focus();
+        }
+
+        function setFormInputsEnabled(enabled) {
+            document.getElementById("batchInput").disabled = !enabled;
+            document.getElementById("qtyInput").disabled = !enabled;
+            document.getElementById("remarkInput").disabled = !enabled;
+            document.getElementById("posisiInput").disabled = !enabled;
+            document.getElementById("btnSave").disabled = !enabled;
+        }
+
+        /* UI UTILITY FUNCTIONS */
+        function showAlert(message, type) {
+            const alertBox = document.getElementById("alertBox");
+            if (type === "hide") {
+                alertBox.style.display = "none";
+                return;
+            }
+            alertBox.className = `alert alert-${type}`;
+            alertBox.innerHTML = message;
+            alertBox.style.display = "block";
+        }
+
+        function showLoading(show, text = "Memuat...") {
+            const overlay = document.getElementById("loadingOverlay");
+            document.getElementById("loadingText").innerText = text;
+            overlay.style.display = show ? "flex" : "none";
+        }
+
+        function showElement(id) {
+            document.getElementById(id).style.display = "block";
+        }
+
+        function hideElement(id) {
+            document.getElementById(id).style.display = "none";
+        }
+
+        function formatDisplayDate(dateStr) {
+            if (!dateStr) return "-";
+            const parts = dateStr.split("-");
+            if (parts.length === 3) {
+                return `${parts[2]}/${parts[1]}/${parts[0]}`;
+            }
+            return dateStr;
+        }
+
+        function escapeHtml(text) {
+            if (!text) return "";
+            return String(text)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+    </script>
+</body>
+</html>
