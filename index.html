@@ -383,8 +383,8 @@
 
                 <!-- TANGGAL TRANSAKSI -->
                 <div class="form-group">
-                    <label for="displayTanggal">Tanggal Transaksi <span class="req">*</span></label>
-                    <input type="date" id="displayTanggal" required>
+                    <label>Tanggal Transaksi</label>
+                    <input type="text" id="displayTanggal" readonly>
                 </div>
 
                 <!-- SUBMIT BUTTON -->
@@ -430,10 +430,13 @@
             setupEventListeners();
         });
 
-        // Set default Tanggal Transaksi = hari ini (format ISO YYYY-MM-DD, sesuai kebutuhan input type="date").
-        // User tetap bisa mengubah nilai ini secara manual lewat date picker.
+        // Set Tanggal Hari Ini (Format Display ID: DD/MM/YYYY, Format Firebase: YYYY-MM-DD)
         function initDateDisplay() {
-            document.getElementById("displayTanggal").value = getTodayISOString();
+            const today = new Date();
+            const day = String(today.getDate()).padStart(2, '0');
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const year = today.getFullYear();
+            document.getElementById("displayTanggal").value = `${day}/${month}/${year}`;
         }
 
         function getTodayISOString() {
@@ -699,90 +702,25 @@
         }
 
         /* QR SCANNER INTEGRATION */
-        async function startQRScanner() {
-            // 1. Cek Secure Context (HTTPS/localhost). Browser modern MEMBLOKIR
-            // akses kamera total jika halaman dibuka langsung dari file (file://)
-            // atau HTTP biasa (bukan HTTPS), tanpa menampilkan dialog izin sama sekali.
-            if (!window.isSecureContext) {
-                showAlert(
-                    "âš  AKSES KAMERA DIBLOKIR BROWSER<br><br>" +
-                    "Halaman ini dibuka langsung dari file (file://) atau HTTP biasa. " +
-                    "Untuk alasan keamanan, browser hanya mengizinkan akses kamera jika halaman " +
-                    "diakses lewat <b>HTTPS</b> atau <b>localhost</b>.<br><br>" +
-                    "<b>Solusi:</b> Upload file ini ke hosting (GitHub Pages, Netlify, Firebase Hosting, dll) " +
-                    "lalu buka lewat URL https://, atau jalankan lewat local server (contoh: extension " +
-                    "\"Live Server\" di VS Code) sehingga alamatnya menjadi http://localhost/...",
-                    "error"
-                );
-                return;
-            }
-
-            // 2. Cek apakah browser mendukung getUserMedia sama sekali
-            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                showAlert("âš  Browser tidak mendukung akses kamera (getUserMedia tidak tersedia).", "error");
-                return;
-            }
-
+        function startQRScanner() {
             showElement("scanner-modal");
             if (!html5QrCode) {
                 html5QrCode = new Html5Qrcode("reader");
             }
 
             const config = { fps: 10, qrbox: { width: 250, height: 250 } };
-
-            try {
-                // Prioritaskan kamera belakang
-                await html5QrCode.start(
-                    { facingMode: "environment" },
-                    config,
-                    onScanSuccess,
-                    onScanFailure
-                );
-            } catch (errBack) {
-                console.warn("Kamera belakang gagal, mencoba kamera default:", errBack);
-                // Fallback: coba kamera apa saja yang tersedia (misal laptop cuma punya 1 kamera depan)
-                try {
-                    const cameras = await Html5Qrcode.getCameras();
-                    if (!cameras || cameras.length === 0) {
-                        throw errBack;
-                    }
-                    await html5QrCode.start(
-                        cameras[0].id,
-                        config,
-                        onScanSuccess,
-                        onScanFailure
-                    );
-                } catch (err) {
-                    console.error("Camera access error:", err);
-                    stopQRScanner();
-                    showAlert(getCameraErrorMessage(err), "error");
-                }
-            }
-        }
-
-        // Terjemahkan error kamera jadi pesan yang jelas untuk user
-        function getCameraErrorMessage(err) {
-            const name = err && err.name ? err.name : "";
-            const msg = (err && err.message) ? err.message : String(err);
-
-            if (name === "NotAllowedError" || /Permission denied/i.test(msg)) {
-                return "âš  IZIN KAMERA DITOLAK<br><br>" +
-                    "Kamu (atau browser) menolak izin kamera untuk halaman ini.<br><br>" +
-                    "<b>Cara memperbaiki:</b><br>" +
-                    "1. Klik ikon gembok/kamera di address bar browser<br>" +
-                    "2. Ubah izin Kamera menjadi <b>Allow/Izinkan</b><br>" +
-                    "3. Reload halaman ini, lalu coba SCAN QR lagi";
-            }
-            if (name === "NotFoundError" || name === "OverconstrainedError") {
-                return "âš  KAMERA TIDAK DITEMUKAN<br><br>Perangkat ini tidak memiliki kamera yang bisa diakses, atau kamera belakang tidak tersedia.";
-            }
-            if (name === "NotReadableError") {
-                return "âš  KAMERA SEDANG DIPAKAI APLIKASI LAIN<br><br>Tutup aplikasi/tab lain yang mungkin sedang menggunakan kamera, lalu coba lagi.";
-            }
-            if (name === "SecurityError") {
-                return "âš  AKSES KAMERA DIBLOKIR (Security Error)<br><br>Pastikan halaman diakses lewat HTTPS atau localhost, bukan file:// atau HTTP biasa.";
-            }
-            return `âš  Kamera tidak dapat diakses.<br><br>Detail: ${escapeHtml(msg)}`;
+            
+            // Prioritaskan kamera belakang
+            html5QrCode.start(
+                { facingMode: "environment" },
+                config,
+                onScanSuccess,
+                onScanFailure
+            ).catch(err => {
+                console.error("Camera access error:", err);
+                stopQRScanner();
+                showAlert("âš  Kamera tidak dapat diakses atau izin ditolak.", "error");
+            });
         }
 
         function onScanSuccess(decodedText) {
@@ -826,13 +764,8 @@
             const qty = parseFloat(qtyStr);
             const remark = document.getElementById("remarkInput").value.trim();
             const posisi = document.getElementById("posisiInput").value.trim();
-            const tanggalTransaksi = document.getElementById("displayTanggal").value; // sudah format ISO YYYY-MM-DD dari input type="date"
 
             /* VALIDATION */
-            if (!tanggalTransaksi) {
-                showAlert("âš  Tanggal transaksi wajib diisi.", "error");
-                return;
-            }
             if (!itemCode) {
                 showAlert("âš  Item Code belum dipilih.", "error");
                 return;
@@ -858,8 +791,8 @@
                 remark: remark || "",
                 posisi: posisi || "",
                 stok: qty,
-                tanggal: tanggalTransaksi, // tanggal transaksi yang DIPILIH user, bukan selalu hari ini
-                uploaded_at: new Date().toISOString() // waktu aktual data dikirim ke Firebase
+                tanggal: getTodayISOString(),
+                uploaded_at: new Date().toISOString()
             };
 
             // Lock Submit & Loading UI
