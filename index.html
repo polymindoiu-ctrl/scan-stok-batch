@@ -5,13 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Stock Batch Input</title>
 
-    <!-- WEB ICON / FAVICON -->
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📦</text></svg>">
     
-    <!-- HTML5-QRCode CDN untuk Scanner QR -->
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 
-    <!-- CSS STYLES -->
     <style>
         :root {
             --primary-color: #2563eb;
@@ -214,6 +211,36 @@
 
         label span.req {
             color: var(--error-color);
+        }
+
+        /* WRAPPER INPUT DENGAN TOMBOL CLEAR "X" */
+        .search-input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .search-input-wrapper input {
+            padding-right: 32px; /* Ruang untuk tombol X */
+        }
+
+        .btn-clear-search {
+            position: absolute;
+            right: 10px;
+            background: none;
+            border: none;
+            font-size: 1.1rem;
+            color: #94a3b8;
+            cursor: pointer;
+            display: none; /* Sembunyi secara default */
+            padding: 2px 6px;
+            line-height: 1;
+            border-radius: 50%;
+        }
+
+        .btn-clear-search:hover {
+            color: #0f172a;
+            background-color: #f1f5f9;
         }
 
         input {
@@ -437,7 +464,6 @@
 <body>
 
     <div class="container">
-        <!-- HEADER -->
         <header>
             <div class="brand">
                 <h1>STOCK BATCH</h1>
@@ -448,19 +474,16 @@
             </div>
         </header>
 
-        <!-- MAIN FORM CARD -->
         <div id="mainFormCard" class="card relative">
             <div id="loadingOverlay" class="loading-overlay">
                 <span id="loadingText">Memuat Data...</span>
             </div>
 
-            <!-- INDIKATOR MODE EDIT -->
             <div id="editBanner" class="edit-banner">
                 <span>✏️ PERBAIKAN DATA (MODE EDIT)</span>
                 <span style="font-size:0.75rem; font-weight:normal;">ID: <span id="editingRecordId">-</span></span>
             </div>
 
-            <!-- NOTIFICATION MESSAGES -->
             <div id="alertBox" class="alert"></div>
 
             <button type="button" id="btnScanQR" class="btn btn-primary" style="margin-bottom: 16px;">
@@ -468,21 +491,24 @@
             </button>
 
             <form id="stockForm" autocomplete="off" onsubmit="return false;">
-                <!-- ITEM CODE -->
                 <div class="form-group">
                     <label for="itemCode">Item Code <span class="req">*</span></label>
-                    <input type="text" id="itemCode" placeholder="Ketik nomor/nama item..." required>
+                    <div class="search-input-wrapper">
+                        <input type="text" id="itemCode" placeholder="Ketik nomor/nama item..." required>
+                        <button type="button" id="btnClearItemCode" class="btn-clear-search" title="Reset Pencarian">✕</button>
+                    </div>
                     <div id="itemSuggestions" class="suggestions-list"></div>
                 </div>
 
-                <!-- ITEM DESC -->
                 <div class="form-group">
                     <label for="itemName">Item Desc</label>
-                    <input type="text" id="itemName" placeholder="Ketik kata kunci (misal: java aged)...">
+                    <div class="search-input-wrapper">
+                        <input type="text" id="itemName" placeholder="Ketik kata kunci (misal: java aged)...">
+                        <button type="button" id="btnClearItemName" class="btn-clear-search" title="Reset Pencarian">✕</button>
+                    </div>
                     <div id="itemNameSuggestions" class="suggestions-list"></div>
                 </div>
 
-                <!-- BATCH EDITABLE & SUGGESTION -->
                 <div class="form-group">
                     <label for="batchInput">Batch <span class="req">*</span></label>
                     <input type="text" id="batchInput" placeholder="Pilih/Ketik Batch..." required>
@@ -490,33 +516,28 @@
                     <div id="batchInfo" class="info-text"></div>
                 </div>
 
-                <!-- QTY DENGAN INFORMASI STOK TERAKHIR -->
                 <div class="form-group">
                     <label for="qtyInput">Qty <span class="req">*</span></label>
                     <input type="number" id="qtyInput" step="any" min="0.01" placeholder="Masukkan jumlah stok" required>
                     <div id="lastStockInfo" class="info-text">💡 Stok terakhir: -</div>
                 </div>
 
-                <!-- REMARK -->
                 <div class="form-group">
                     <label for="remarkInput">Remark</label>
                     <input type="text" id="remarkInput" placeholder="Contoh: Palet 12 (opsional)">
                     <div id="remarkSuggestions" class="suggestions-list"></div>
                 </div>
 
-                <!-- POSISI -->
                 <div class="form-group">
                     <label for="posisiInput">Posisi</label>
                     <input type="text" id="posisiInput" placeholder="Contoh: Rak A1 (opsional)">
                 </div>
 
-                <!-- TANGGAL TRANSAKSI -->
                 <div class="form-group">
                     <label>Tanggal Transaksi</label>
                     <input type="text" id="displayTanggal" readonly>
                 </div>
 
-                <!-- SUBMIT BUTTON (BERUBAH TEKS SESUAI MODE) -->
                 <button type="button" id="btnSave" class="btn btn-primary" style="margin-top: 8px;">
                     SIMPAN DATA
                 </button>
@@ -529,14 +550,12 @@
             </form>
         </div>
 
-        <!-- TABEL INPUT HARI INI -->
         <div class="card">
             <div class="today-list-header">
                 <h2>📊 Tabel Input Hari Ini</h2>
                 <span id="todayCount" class="today-count">0 Item</span>
             </div>
 
-            <!-- TABEL CONTAINER DENGAN KOLOM AKSI EDIT -->
             <div class="table-responsive">
                 <table class="data-table">
                     <thead>
@@ -567,7 +586,6 @@
         </div>
     </div>
 
-    <!-- QR SCANNER MODAL -->
     <div id="scanner-modal">
         <div class="scanner-box">
             <h3 style="margin-bottom: 12px;">Scan QR Item Code</h3>
@@ -576,7 +594,6 @@
         </div>
     </div>
 
-    <!-- JAVASCRIPT APP LOGIC -->
     <script>
         /* CONFIGURATION */
         const FIREBASE_DB_URL = "https://ambil-data-dd0d1-default-rtdb.asia-southeast1.firebasedatabase.app";
@@ -589,7 +606,7 @@
         let html5QrCode = null;
         let isSaving = false;
         let selectedItemCode = "";
-        let currentEditId = null; // Menyimpan ID firebase yang sedang di-edit (null jika mode input baru)
+        let currentEditId = null; // ID firebase saat mode edit (null jika input baru)
 
         /* INITIALIZATION */
         document.addEventListener("DOMContentLoaded", () => {
@@ -691,12 +708,26 @@
         /* EVENT LISTENERS SETUP */
         function setupEventListeners() {
             const itemCodeInput = document.getElementById("itemCode");
-            itemCodeInput.addEventListener("input", handleSearchInput);
+            itemCodeInput.addEventListener("input", (e) => {
+                handleSearchInput(e);
+                toggleClearButton("itemCode", "btnClearItemCode");
+            });
             itemCodeInput.addEventListener("focus", handleSearchInput);
 
             const itemNameInput = document.getElementById("itemName");
-            itemNameInput.addEventListener("input", handleSearchInput);
+            itemNameInput.addEventListener("input", (e) => {
+                handleSearchInput(e);
+                toggleClearButton("itemName", "btnClearItemName");
+            });
             itemNameInput.addEventListener("focus", handleSearchInput);
+
+            // Listener Tombol Reset Pencarian "X"
+            document.getElementById("btnClearItemCode").addEventListener("click", () => {
+                clearSearchInput("itemCode", "itemSuggestions", "btnClearItemCode");
+            });
+            document.getElementById("btnClearItemName").addEventListener("click", () => {
+                clearSearchInput("itemName", "itemNameSuggestions", "btnClearItemName");
+            });
 
             const batchInput = document.getElementById("batchInput");
             batchInput.addEventListener("focus", showBatchSuggestions);
@@ -707,10 +738,10 @@
             remarkInput.addEventListener("input", handleRemarkInput);
 
             document.addEventListener("click", (e) => {
-                if (!e.target.closest("#itemCode") && !e.target.closest("#itemSuggestions")) {
+                if (!e.target.closest("#itemCode") && !e.target.closest("#itemSuggestions") && !e.target.closest("#btnClearItemCode")) {
                     hideElement("itemSuggestions");
                 }
-                if (!e.target.closest("#itemName") && !e.target.closest("#itemNameSuggestions")) {
+                if (!e.target.closest("#itemName") && !e.target.closest("#itemNameSuggestions") && !e.target.closest("#btnClearItemName")) {
                     hideElement("itemNameSuggestions");
                 }
                 if (!e.target.closest("#batchInput") && !e.target.closest("#batchSuggestions")) {
@@ -725,6 +756,33 @@
             document.getElementById("btnCloseScanner").addEventListener("click", stopQRScanner);
             document.getElementById("btnSave").addEventListener("click", handleSave);
             document.getElementById("btnResetAll").addEventListener("click", resetFullForm);
+        }
+
+        /* LOGIKA RESET PENCARIAN ITEM */
+        function clearSearchInput(inputId, suggestionId, clearBtnId) {
+            const inputElem = document.getElementById(inputId);
+            inputElem.value = "";
+            
+            hideElement(suggestionId);
+            hideElement(clearBtnId);
+            
+            if (inputId === "itemCode") {
+                document.getElementById("itemName").value = "";
+                hideElement("btnClearItemName");
+                selectedItemCode = "";
+                updateLastStockInfo();
+            }
+            
+            inputElem.focus();
+        }
+
+        function toggleClearButton(inputId, clearBtnId) {
+            const val = document.getElementById(inputId).value.trim();
+            if (val.length > 0) {
+                showElement(clearBtnId);
+            } else {
+                hideElement(clearBtnId);
+            }
         }
 
         /* SMART SEARCH MULTI-KEYWORD LOGIC */
@@ -776,6 +834,7 @@
 
         function selectItem(itemCode) {
             document.getElementById("itemCode").value = itemCode;
+            toggleClearButton("itemCode", "btnClearItemCode");
             hideElement("itemSuggestions");
             hideElement("itemNameSuggestions");
             processSelectedItem(itemCode);
@@ -789,6 +848,7 @@
             if (itemRecords.length === 0) {
                 showAlert(`⚠ ITEM TIDAK DITEMUKAN<br><br>Item Code: <b>${escapeHtml(itemCode)}</b><br>Data item tidak ditemukan di Firebase. Silakan periksa QR atau Item Code.`, "error");
                 document.getElementById("itemName").value = "";
+                hideElement("btnClearItemName");
                 document.getElementById("batchInput").value = "";
                 document.getElementById("batchInfo").innerText = "";
                 setFormInputsEnabled(false);
@@ -798,10 +858,10 @@
 
             const itemName = itemRecords[0].itemname || "-";
             document.getElementById("itemName").value = itemName;
+            toggleClearButton("itemName", "btnClearItemName");
             showAlert("", "hide");
             setFormInputsEnabled(true);
 
-            // Jika tidak sedang mode edit, carikan batch otomatis
             if (!currentEditId) {
                 processBatchSelection(itemRecords);
             }
@@ -981,7 +1041,7 @@
             const matchedRecords = stockData.filter(d => 
                 String(d.itemnumber || "").trim() === itemCode && 
                 String(d.batch || "").trim() === batch &&
-                d._id !== currentEditId // Kecualikan item yang sedang di-edit agar tidak membingungkan
+                d._id !== currentEditId
             );
 
             if (matchedRecords.length === 0) {
@@ -1026,6 +1086,7 @@
             const itemCode = decodedText.trim();
             stopQRScanner();
             document.getElementById("itemCode").value = itemCode;
+            toggleClearButton("itemCode", "btnClearItemCode");
             processSelectedItem(itemCode);
             setTimeout(() => { document.getElementById("qtyInput").focus(); }, 300);
         }
@@ -1040,7 +1101,7 @@
             }
         }
 
-        /* FITUR 3: FUNGSI MUAT DATA KE FORM UNTUK EDIT */
+        /* FUNGSI MUAT DATA KE FORM UNTUK EDIT */
         function startEditRecord(recordId) {
             const target = stockData.find(d => d._id === recordId);
             if (!target) {
@@ -1052,13 +1113,16 @@
 
             // Isi nilai form dari record yang akan di-edit
             document.getElementById("itemCode").value = target.itemnumber || "";
+            toggleClearButton("itemCode", "btnClearItemCode");
+
             document.getElementById("itemName").value = target.itemname || "";
+            toggleClearButton("itemName", "btnClearItemName");
+
             document.getElementById("batchInput").value = target.batch || "";
             document.getElementById("qtyInput").value = target.stok || "";
             document.getElementById("remarkInput").value = target.remark || "";
             document.getElementById("posisiInput").value = target.posisi || "";
 
-            // Format tanggal display dari record
             if (target.tanggal) {
                 const parts = target.tanggal.split("-");
                 if (parts.length === 3) {
@@ -1079,11 +1143,10 @@
             updateLastStockInfo();
             showAlert(`✏️ Anda sedang mengubah data untuk <b>${escapeHtml(target.itemnumber)}</b>. Klik "UPDATE DATA" untuk menyimpan perubahan.`, "warning");
 
-            // Scroll ke atas (Form Input)
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
-        /* LOGIKA SIMPAN (MENDUKUNG UPDATE / POST) */
+        /* LOGIKA SIMPAN / UPDATE DENGAN PATCH */
         async function handleSave() {
             if (isSaving) return;
 
@@ -1117,7 +1180,7 @@
 
             try {
                 if (currentEditId) {
-                    // MODE EDIT (UPDATE DENGAN PATCH) - Overwrite record yang ada
+                    // MODE EDIT (PATCH OVERWRITE)
                     showLoading(true, "Memperbarui data di Firebase...");
 
                     const payloadUpdate = {
@@ -1132,7 +1195,6 @@
 
                     await updateStockInFirebase(currentEditId, payloadUpdate);
 
-                    // Update lokal cache stockData
                     const index = stockData.findIndex(d => d._id === currentEditId);
                     if (index !== -1) {
                         stockData[index] = { ...stockData[index], ...payloadUpdate };
@@ -1140,11 +1202,10 @@
 
                     showAlert(`✓ DATA BERHASIL DIPERBARUI<br><br>Item: <b>${escapeHtml(itemCode)}</b><br>Batch: <b>${escapeHtml(batch)}</b><br>Qty Baru: <b>${qty}</b>`, "success");
                     
-                    // Keluar dari Mode Edit
                     resetFullForm();
 
                 } else {
-                    // MODE INPUT BARU (POST) - Tambah record baru
+                    // MODE INPUT BARU (POST)
                     showLoading(true, "Menyimpan data baru...");
 
                     const payloadNew = {
@@ -1190,7 +1251,7 @@
             }
         }
 
-        /* RENDER TABEL DAFTAR INPUT HARI INI (DENGAN TOMBOL EDIT) */
+        /* RENDER TABEL DAFTAR INPUT HARI INI */
         function renderTodayTable() {
             const todayISO = getTodayISOString();
             const tbody = document.getElementById("todayTableBody");
@@ -1233,7 +1294,10 @@
             document.getElementById("itemName").value = "";
             document.getElementById("batchInfo").innerText = "";
             
-            // UI Reset dari Mode Edit
+            hideElement("btnClearItemCode");
+            hideElement("btnClearItemName");
+
+            // UI Reset
             document.getElementById("mainFormCard").classList.remove("edit-mode");
             document.getElementById("editBanner").style.display = "none";
             document.getElementById("editingRecordId").innerText = "-";
