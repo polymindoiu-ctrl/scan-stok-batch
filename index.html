@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Stock Batch Input</title>
+
+    <!-- WEB ICON / FAVICON -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📦</text></svg>">
     
     <!-- HTML5-QRCode CDN untuk Scanner QR -->
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
@@ -42,7 +45,7 @@
 
         .container {
             width: 100%;
-            max-width: 600px;
+            max-width: 650px;
             display: flex;
             flex-direction: column;
             gap: 16px;
@@ -108,6 +111,25 @@
             box-shadow: var(--shadow);
         }
 
+        /* MODE EDIT BADGE & CARD INDICATOR */
+        .card.edit-mode {
+            border: 2px solid var(--warning-color);
+        }
+
+        .edit-banner {
+            display: none;
+            background-color: #fffbe6;
+            color: #b45309;
+            border: 1px solid #fef3c7;
+            padding: 8px 12px;
+            border-radius: var(--radius);
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 12px;
+            justify-content: space-between;
+            align-items: center;
+        }
+
         /* BUTTONS */
         .btn {
             width: 100%;
@@ -133,6 +155,15 @@
             background-color: var(--primary-hover);
         }
 
+        .btn-warning {
+            background-color: var(--warning-color);
+            color: white;
+        }
+
+        .btn-warning:hover {
+            background-color: #b45309;
+        }
+
         .btn-secondary {
             background-color: #e2e8f0;
             color: var(--text-main);
@@ -145,6 +176,21 @@
         .btn-danger {
             background-color: var(--error-color);
             color: white;
+        }
+
+        .btn-action-edit {
+            background-color: #fef3c7;
+            color: #b45309;
+            border: 1px solid #fde68a;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .btn-action-edit:hover {
+            background-color: #fde68a;
         }
 
         .btn:disabled {
@@ -313,7 +359,7 @@
 
         .relative { position: relative; }
 
-        /* FITUR TABEL DATA HARI INI */
+        /* TABEL DATA HARI INI */
         .today-list-header {
             display: flex;
             justify-content: space-between;
@@ -395,7 +441,7 @@
         <header>
             <div class="brand">
                 <h1>STOCK BATCH</h1>
-                <p>Input Data Stok Firebase</p>
+                <p>Input & Edit Data Stok Firebase</p>
             </div>
             <div id="connectionStatus" class="status-badge status-offline">
                 <span class="dot dot-offline"></span> <span id="statusText">Checking...</span>
@@ -403,9 +449,15 @@
         </header>
 
         <!-- MAIN FORM CARD -->
-        <div class="card relative">
+        <div id="mainFormCard" class="card relative">
             <div id="loadingOverlay" class="loading-overlay">
                 <span id="loadingText">Memuat Data...</span>
+            </div>
+
+            <!-- INDIKATOR MODE EDIT -->
+            <div id="editBanner" class="edit-banner">
+                <span>✏️ PERBAIKAN DATA (MODE EDIT)</span>
+                <span style="font-size:0.75rem; font-weight:normal;">ID: <span id="editingRecordId">-</span></span>
             </div>
 
             <!-- NOTIFICATION MESSAGES -->
@@ -438,13 +490,14 @@
                     <div id="batchInfo" class="info-text"></div>
                 </div>
 
-                <!-- QTY -->
+                <!-- QTY DENGAN INFORMASI STOK TERAKHIR -->
                 <div class="form-group">
                     <label for="qtyInput">Qty <span class="req">*</span></label>
                     <input type="number" id="qtyInput" step="any" min="0.01" placeholder="Masukkan jumlah stok" required>
+                    <div id="lastStockInfo" class="info-text">💡 Stok terakhir: -</div>
                 </div>
 
-                <!-- REMARK (DENGAN AUTOCOMPLETE LOCALSTORAGE) -->
+                <!-- REMARK -->
                 <div class="form-group">
                     <label for="remarkInput">Remark</label>
                     <input type="text" id="remarkInput" placeholder="Contoh: Palet 12 (opsional)">
@@ -463,7 +516,7 @@
                     <input type="text" id="displayTanggal" readonly>
                 </div>
 
-                <!-- SUBMIT BUTTON -->
+                <!-- SUBMIT BUTTON (BERUBAH TEKS SESUAI MODE) -->
                 <button type="button" id="btnSave" class="btn btn-primary" style="margin-top: 8px;">
                     SIMPAN DATA
                 </button>
@@ -476,18 +529,19 @@
             </form>
         </div>
 
-        <!-- FITUR TABEL INPUT HARI INI -->
+        <!-- TABEL INPUT HARI INI -->
         <div class="card">
             <div class="today-list-header">
                 <h2>📊 Tabel Input Hari Ini</h2>
                 <span id="todayCount" class="today-count">0 Item</span>
             </div>
 
-            <!-- TABEL CONTAINER -->
+            <!-- TABEL CONTAINER DENGAN KOLOM AKSI EDIT -->
             <div class="table-responsive">
                 <table class="data-table">
                     <thead>
                         <tr>
+                            <th>Aksi</th>
                             <th>Jam</th>
                             <th>Item Code</th>
                             <th>Item Name</th>
@@ -498,12 +552,12 @@
                     </thead>
                     <tbody id="todayTableBody">
                         <tr>
-                            <td colspan="6" class="empty-today">Belum ada data diinput hari ini.</td>
+                            <td colspan="7" class="empty-today">Belum ada data diinput hari ini.</td>
                         </tr>
                     </tbody>
                     <tfoot>
                         <tr>
-                            <td colspan="3" style="text-align: right;">Total Qty:</td>
+                            <td colspan="4" style="text-align: right;">Total Qty:</td>
                             <td id="todayTotalQty" style="color: var(--primary-color);">0</td>
                             <td colspan="2"></td>
                         </tr>
@@ -535,6 +589,7 @@
         let html5QrCode = null;
         let isSaving = false;
         let selectedItemCode = "";
+        let currentEditId = null; // Menyimpan ID firebase yang sedang di-edit (null jika mode input baru)
 
         /* INITIALIZATION */
         document.addEventListener("DOMContentLoaded", () => {
@@ -581,6 +636,7 @@
                 updateConnectionStatus(true);
                 showAlert("", "hide");
                 renderTodayTable();
+                updateLastStockInfo();
             } catch (error) {
                 console.error("Firebase Error:", error);
                 updateConnectionStatus(false);
@@ -590,6 +646,7 @@
             }
         }
 
+        // Simpan Data Baru (POST)
         async function saveStockToFirebase(payload) {
             const response = await fetch(ENDPOINT_URL, {
                 method: "POST",
@@ -597,10 +654,20 @@
                 body: JSON.stringify(payload)
             });
 
-            if (!response.ok) {
-                throw new Error("Gagal mengirim data ke Firebase.");
-            }
+            if (!response.ok) throw new Error("Gagal mengirim data ke Firebase.");
+            return await response.json();
+        }
 
+        // FITUR EDIT: Update Data Lama (PATCH) - Tidak membuat record baru
+        async function updateStockInFirebase(recordId, payload) {
+            const updateUrl = `${FIREBASE_DB_URL}/${DATA_PATH}/${recordId}.json`;
+            const response = await fetch(updateUrl, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) throw new Error("Gagal memperbarui data di Firebase.");
             return await response.json();
         }
 
@@ -660,7 +727,7 @@
             document.getElementById("btnResetAll").addEventListener("click", resetFullForm);
         }
 
-        /* SMART SEARCH MULTI-KEYWORD LOGIC (SPASI TOKEN MATCHING) */
+        /* SMART SEARCH MULTI-KEYWORD LOGIC */
         function handleSearchInput(e) {
             const targetId = e.target.id;
             const query = e.target.value.trim().toLowerCase();
@@ -672,9 +739,7 @@
                 return;
             }
 
-            // Memecah kata kunci berdasarkan spasi
             const tokens = query.split(/\s+/).filter(t => t.length > 0);
-
             const uniqueItemsMap = new Map();
 
             stockData.forEach(item => {
@@ -682,7 +747,6 @@
                 const descStr = String(item.itemname || "").toLowerCase();
                 const combinedStr = `${codeStr} ${descStr}`;
 
-                // Mengecek apakah setiap kata kunci dipenuhi oleh kombinasi Code & Desc
                 const isMatch = tokens.every(token => combinedStr.includes(token));
 
                 if (isMatch) {
@@ -728,6 +792,7 @@
                 document.getElementById("batchInput").value = "";
                 document.getElementById("batchInfo").innerText = "";
                 setFormInputsEnabled(false);
+                updateLastStockInfo();
                 return;
             }
 
@@ -736,34 +801,29 @@
             showAlert("", "hide");
             setFormInputsEnabled(true);
 
-            processBatchSelection(itemRecords);
+            // Jika tidak sedang mode edit, carikan batch otomatis
+            if (!currentEditId) {
+                processBatchSelection(itemRecords);
+            }
         }
 
-        /* LOGIKA REMARK (MENGINGAT LOKAL PER PERANGKAT - LOCALSTORAGE) */
+        /* REMARK LOCALSTORAGE FUNCTIONS */
         function getSavedRemarks() {
             try {
                 const saved = localStorage.getItem(LOCAL_STORAGE_REMARKS_KEY);
                 return saved ? JSON.parse(saved) : [];
-            } catch (e) {
-                return [];
-            }
+            } catch (e) { return []; }
         }
 
         function saveRemarkToLocalStorage(remarkText) {
             if (!remarkText) return;
             let remarks = getSavedRemarks();
-            // Hapus duplikat secara insensitif huruf besar/kecil
             remarks = remarks.filter(r => r.toLowerCase() !== remarkText.toLowerCase());
-            // Tambahkan di urutan paling depan
             remarks.unshift(remarkText);
-            // Simpan maksimal 20 riwayat
             if (remarks.length > 20) remarks = remarks.slice(0, 20);
-            
             try {
                 localStorage.setItem(LOCAL_STORAGE_REMARKS_KEY, JSON.stringify(remarks));
-            } catch (e) {
-                console.error("Gagal menyimpan ke localStorage:", e);
-            }
+            } catch (e) {}
         }
 
         function handleRemarkInput(e) {
@@ -777,7 +837,6 @@
             }
 
             const filtered = savedRemarks.filter(r => r.toLowerCase().includes(query));
-
             if (filtered.length === 0) {
                 hideElement("remarkSuggestions");
                 return;
@@ -797,7 +856,7 @@
             hideElement("remarkSuggestions");
         }
 
-        /* LOGIKA BATCH (30 HARI TERAKHIR) */
+        /* BATCH SELECTION LOGIC */
         function processBatchSelection(itemRecords) {
             const today = new Date();
             today.setHours(23, 59, 59, 999);
@@ -810,10 +869,7 @@
                 if (!dateStr) return null;
                 const parts = String(dateStr).trim().split('-');
                 if (parts.length === 3) {
-                    const y = parseInt(parts[0], 10);
-                    const m = parseInt(parts[1], 10) - 1;
-                    const d = parseInt(parts[2], 10);
-                    return new Date(y, m, d);
+                    return new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
                 }
                 return null;
             }
@@ -828,9 +884,10 @@
 
             if (recordsToProcess.length === 0) {
                 document.getElementById("batchInput").value = "";
-                document.getElementById("batchInfo").innerText = "Tidak ada data batch untuk Item Code ini. Silakan isi batch secara manual.";
+                document.getElementById("batchInfo").innerText = "Tidak ada data batch. Silakan isi batch secara manual.";
                 document.getElementById("batchInfo").style.color = "var(--warning-color)";
                 window.currentSortedBatches = [];
+                updateLastStockInfo();
                 return;
             }
 
@@ -855,9 +912,7 @@
             });
 
             const sortedBatches = Array.from(batchMap.entries()).sort((a, b) => {
-                if (b[1].tanggal !== a[1].tanggal) {
-                    return b[1].tanggal.localeCompare(a[1].tanggal);
-                }
+                if (b[1].tanggal !== a[1].tanggal) return b[1].tanggal.localeCompare(a[1].tanggal);
                 return b[1].uploaded_at.localeCompare(a[1].uploaded_at);
             });
 
@@ -868,24 +923,24 @@
             window.currentSortedBatches = sortedBatches.map(item => item[0]);
 
             if (recentRecords.length > 0) {
-                document.getElementById("batchInfo").innerText = `Batch ditemukan dari data 30 hari terakhir. (Terakhir: ${formatDisplayDate(latestInfo.tanggal)}, Stok: ${latestInfo.stok}, Remark: ${latestInfo.remark || '-'})`;
+                document.getElementById("batchInfo").innerText = `Batch ditemukan (Terakhir: ${formatDisplayDate(latestInfo.tanggal)}, Stok: ${latestInfo.stok})`;
                 document.getElementById("batchInfo").style.color = "var(--text-muted)";
             } else {
-                document.getElementById("batchInfo").innerText = `Tidak ada batch dalam 30 hari terakhir. Menggunakan batch terakhir historical: ${defaultBatch}`;
+                document.getElementById("batchInfo").innerText = `Batch terakhir historical: ${defaultBatch}`;
                 document.getElementById("batchInfo").style.color = "var(--warning-color)";
             }
+
+            updateLastStockInfo();
         }
 
         function showBatchSuggestions() {
             if (!window.currentSortedBatches || window.currentSortedBatches.length === 0) return;
-
             const container = document.getElementById("batchSuggestions");
             container.innerHTML = window.currentSortedBatches.map(b => `
                 <div class="suggestion-item" onclick="selectBatch('${escapeHtml(b)}')">
                     <div class="item-code">${escapeHtml(b)}</div>
                 </div>
             `).join("");
-
             showElement("batchSuggestions");
         }
 
@@ -908,6 +963,44 @@
             } else {
                 batchInfo.innerText = "";
             }
+
+            updateLastStockInfo();
+        }
+
+        /* INFORMASI STOK TERAKHIR */
+        function updateLastStockInfo() {
+            const itemCode = document.getElementById("itemCode").value.trim();
+            const batch = document.getElementById("batchInput").value.trim();
+            const infoElem = document.getElementById("lastStockInfo");
+
+            if (!itemCode || !batch) {
+                infoElem.innerText = "💡 Stok terakhir: -";
+                return;
+            }
+
+            const matchedRecords = stockData.filter(d => 
+                String(d.itemnumber || "").trim() === itemCode && 
+                String(d.batch || "").trim() === batch &&
+                d._id !== currentEditId // Kecualikan item yang sedang di-edit agar tidak membingungkan
+            );
+
+            if (matchedRecords.length === 0) {
+                infoElem.innerText = "💡 Stok terakhir: Belum ada";
+                return;
+            }
+
+            matchedRecords.sort((a, b) => {
+                const dateA = String(a.tanggal || "");
+                const dateB = String(b.tanggal || "");
+                if (dateB !== dateA) return dateB.localeCompare(dateA);
+                return String(b.uploaded_at || "").localeCompare(String(a.uploaded_at || ""));
+            });
+
+            const latestRecord = matchedRecords[0];
+            const lastQty = parseFloat(latestRecord.stok);
+            const formattedQty = isNaN(lastQty) ? latestRecord.stok : lastQty;
+
+            infoElem.innerText = `💡 Stok terakhir: ${formattedQty}`;
         }
 
         /* QR SCANNER INTEGRATION */
@@ -916,9 +1009,7 @@
             if (!html5QrCode) {
                 html5QrCode = new Html5Qrcode("reader");
             }
-
             const config = { fps: 10, qrbox: { width: 250, height: 250 } };
-            
             html5QrCode.start(
                 { facingMode: "environment" },
                 config,
@@ -934,31 +1025,65 @@
         function onScanSuccess(decodedText) {
             const itemCode = decodedText.trim();
             stopQRScanner();
-
             document.getElementById("itemCode").value = itemCode;
             processSelectedItem(itemCode);
-
-            setTimeout(() => {
-                document.getElementById("qtyInput").focus();
-            }, 300);
+            setTimeout(() => { document.getElementById("qtyInput").focus(); }, 300);
         }
 
         function onScanFailure(error) {}
 
         function stopQRScanner() {
             if (html5QrCode && html5QrCode.isScanning) {
-                html5QrCode.stop().then(() => {
-                    hideElement("scanner-modal");
-                }).catch(err => {
-                    console.error("Failed to stop scanner", err);
-                    hideElement("scanner-modal");
-                });
+                html5QrCode.stop().then(() => { hideElement("scanner-modal"); }).catch(err => { hideElement("scanner-modal"); });
             } else {
                 hideElement("scanner-modal");
             }
         }
 
-        /* SAVE DATA LOGIC & VALIDATION */
+        /* FITUR 3: FUNGSI MUAT DATA KE FORM UNTUK EDIT */
+        function startEditRecord(recordId) {
+            const target = stockData.find(d => d._id === recordId);
+            if (!target) {
+                showAlert("⚠ Data tidak ditemukan di memori.", "error");
+                return;
+            }
+
+            currentEditId = recordId;
+
+            // Isi nilai form dari record yang akan di-edit
+            document.getElementById("itemCode").value = target.itemnumber || "";
+            document.getElementById("itemName").value = target.itemname || "";
+            document.getElementById("batchInput").value = target.batch || "";
+            document.getElementById("qtyInput").value = target.stok || "";
+            document.getElementById("remarkInput").value = target.remark || "";
+            document.getElementById("posisiInput").value = target.posisi || "";
+
+            // Format tanggal display dari record
+            if (target.tanggal) {
+                const parts = target.tanggal.split("-");
+                if (parts.length === 3) {
+                    document.getElementById("displayTanggal").value = `${parts[2]}/${parts[1]}/${parts[0]}`;
+                }
+            }
+
+            // Ubah Tampilan UI ke Mode Edit
+            document.getElementById("mainFormCard").classList.add("edit-mode");
+            document.getElementById("editBanner").style.display = "flex";
+            document.getElementById("editingRecordId").innerText = recordId;
+            
+            const btnSave = document.getElementById("btnSave");
+            btnSave.innerText = "UPDATE DATA";
+            btnSave.className = "btn btn-warning";
+
+            setFormInputsEnabled(true);
+            updateLastStockInfo();
+            showAlert(`✏️ Anda sedang mengubah data untuk <b>${escapeHtml(target.itemnumber)}</b>. Klik "UPDATE DATA" untuk menyimpan perubahan.`, "warning");
+
+            // Scroll ke atas (Form Input)
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        /* LOGIKA SIMPAN (MENDUKUNG UPDATE / POST) */
         async function handleSave() {
             if (isSaving) return;
 
@@ -971,7 +1096,7 @@
             const posisi = document.getElementById("posisiInput").value.trim();
 
             if (!itemCode) {
-                showAlert("⚠ Item Code belum dipilih.", "error");
+                showAlert("⚠ Item Code belum diisi.", "error");
                 return;
             }
             if (!itemName) {
@@ -987,49 +1112,77 @@
                 return;
             }
 
-            const payload = {
-                batch: batch,
-                itemname: itemName,
-                itemnumber: itemCode,
-                remark: remark || "",
-                posisi: posisi || "",
-                stok: qty,
-                tanggal: getTodayISOString(),
-                uploaded_at: new Date().toISOString()
-            };
-
             isSaving = true;
             document.getElementById("btnSave").disabled = true;
-            showLoading(true, "Menyimpan data...");
 
             try {
-                const response = await saveStockToFirebase(payload);
+                if (currentEditId) {
+                    // MODE EDIT (UPDATE DENGAN PATCH) - Overwrite record yang ada
+                    showLoading(true, "Memperbarui data di Firebase...");
 
-                // Simpan Remark ke Memory Browser Perangkat
-                if (remark) {
-                    saveRemarkToLocalStorage(remark);
+                    const payloadUpdate = {
+                        batch: batch,
+                        itemname: itemName,
+                        itemnumber: itemCode,
+                        remark: remark || "",
+                        posisi: posisi || "",
+                        stok: qty,
+                        updated_at: new Date().toISOString()
+                    };
+
+                    await updateStockInFirebase(currentEditId, payloadUpdate);
+
+                    // Update lokal cache stockData
+                    const index = stockData.findIndex(d => d._id === currentEditId);
+                    if (index !== -1) {
+                        stockData[index] = { ...stockData[index], ...payloadUpdate };
+                    }
+
+                    showAlert(`✓ DATA BERHASIL DIPERBARUI<br><br>Item: <b>${escapeHtml(itemCode)}</b><br>Batch: <b>${escapeHtml(batch)}</b><br>Qty Baru: <b>${qty}</b>`, "success");
+                    
+                    // Keluar dari Mode Edit
+                    resetFullForm();
+
+                } else {
+                    // MODE INPUT BARU (POST) - Tambah record baru
+                    showLoading(true, "Menyimpan data baru...");
+
+                    const payloadNew = {
+                        batch: batch,
+                        itemname: itemName,
+                        itemnumber: itemCode,
+                        remark: remark || "",
+                        posisi: posisi || "",
+                        stok: qty,
+                        tanggal: getTodayISOString(),
+                        uploaded_at: new Date().toISOString()
+                    };
+
+                    const response = await saveStockToFirebase(payloadNew);
+
+                    if (remark) saveRemarkToLocalStorage(remark);
+                    
+                    stockData.push({
+                        _id: response.name,
+                        ...payloadNew
+                    });
+
+                    showAlert(`✓ DATA BERHASIL DISIMPAN<br><br>Item: <b>${escapeHtml(itemCode)}</b><br>Batch: <b>${escapeHtml(batch)}</b><br>Qty: <b>${qty}</b>`, "success");
+
+                    document.getElementById("qtyInput").value = "";
+                    document.getElementById("remarkInput").value = "";
+                    document.getElementById("posisiInput").value = "";
+
+                    const itemRecords = stockData.filter(d => d.itemnumber === itemCode);
+                    processBatchSelection(itemRecords);
                 }
-                
-                stockData.push({
-                    _id: response.name,
-                    ...payload
-                });
 
-                showAlert(`✓ DATA BERHASIL DISIMPAN<br><br>Item: <b>${escapeHtml(itemCode)}</b><br>Batch: <b>${escapeHtml(batch)}</b><br>Qty: <b>${qty}</b>`, "success");
-
-                // Reset Field Input Form
-                document.getElementById("qtyInput").value = "";
-                document.getElementById("remarkInput").value = "";
-                document.getElementById("posisiInput").value = "";
-
-                // Refresh Data Batch & Tabel Hari Ini
-                const itemRecords = stockData.filter(d => d.itemnumber === itemCode);
-                processBatchSelection(itemRecords);
+                if (remark) saveRemarkToLocalStorage(remark);
                 renderTodayTable();
 
             } catch (error) {
-                console.error("Save Error:", error);
-                showAlert("⚠ Gagal menyimpan data ke Firebase. Periksa koneksi internet.", "error");
+                console.error("Save/Update Error:", error);
+                showAlert("⚠ Gagal menyimpan/memperbarui data ke Firebase. Periksa koneksi internet.", "error");
             } finally {
                 isSaving = false;
                 document.getElementById("btnSave").disabled = false;
@@ -1037,7 +1190,7 @@
             }
         }
 
-        /* FITUR: RENDER TABEL DAFTAR INPUT HARI INI */
+        /* RENDER TABEL DAFTAR INPUT HARI INI (DENGAN TOMBOL EDIT) */
         function renderTodayTable() {
             const todayISO = getTodayISOString();
             const tbody = document.getElementById("todayTableBody");
@@ -1051,7 +1204,7 @@
             document.getElementById("todayTotalQty").innerText = totalQty.toLocaleString("id-ID");
 
             if (todayData.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="6" class="empty-today">Belum ada data diinput hari ini.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="7" class="empty-today">Belum ada data diinput hari ini.</td></tr>`;
                 return;
             }
 
@@ -1059,6 +1212,9 @@
                 const timeStr = item.uploaded_at ? new Date(item.uploaded_at).toLocaleTimeString("id-ID", { hour: '2-digit', minute: '2-digit' }) : '-';
                 return `
                     <tr>
+                        <td>
+                            <button type="button" class="btn-action-edit" onclick="startEditRecord('${item._id}')">✏️ Edit</button>
+                        </td>
                         <td>${timeStr}</td>
                         <td><b>${escapeHtml(item.itemnumber)}</b></td>
                         <td><b>${escapeHtml(item.itemname)}</b></td>
@@ -1070,16 +1226,28 @@
             }).join("");
         }
 
-        /* FORM RESET HELPERS */
+        /* FORM RESET & KELUAR DARI MODE EDIT */
         function resetFullForm() {
+            currentEditId = null;
             document.getElementById("stockForm").reset();
             document.getElementById("itemName").value = "";
             document.getElementById("batchInfo").innerText = "";
+            
+            // UI Reset dari Mode Edit
+            document.getElementById("mainFormCard").classList.remove("edit-mode");
+            document.getElementById("editBanner").style.display = "none";
+            document.getElementById("editingRecordId").innerText = "-";
+            
+            const btnSave = document.getElementById("btnSave");
+            btnSave.innerText = "SIMPAN DATA";
+            btnSave.className = "btn btn-primary";
+
             initDateDisplay();
             selectedItemCode = "";
             window.currentSortedBatches = [];
             setFormInputsEnabled(true);
             showAlert("", "hide");
+            updateLastStockInfo();
             document.getElementById("itemCode").focus();
         }
 
@@ -1109,20 +1277,13 @@
             overlay.style.display = show ? "flex" : "none";
         }
 
-        function showElement(id) {
-            document.getElementById(id).style.display = "block";
-        }
-
-        function hideElement(id) {
-            document.getElementById(id).style.display = "none";
-        }
+        function showElement(id) { document.getElementById(id).style.display = "block"; }
+        function hideElement(id) { document.getElementById(id).style.display = "none"; }
 
         function formatDisplayDate(dateStr) {
             if (!dateStr) return "-";
             const parts = dateStr.split("-");
-            if (parts.length === 3) {
-                return `${parts[2]}/${parts[1]}/${parts[0]}`;
-            }
+            if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
             return dateStr;
         }
 
