@@ -1,1642 +1,1532 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stock Batch Input</title>
-
-    <link rel="icon" type="image/svg+xml" href="favicon.svg">
-    
-    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-
-    <style>
-        :root {
-            --primary-color: #2563eb;
-            --primary-hover: #1d4ed8;
-            --bg-color: #f8fafc;
-            --card-bg: #ffffff;
-            --text-main: #0f172a;
-            --text-muted: #64748b;
-            --border-color: #cbd5e1;
-            --success-color: #16a34a;
-            --error-color: #dc2626;
-            --warning-color: #d97706;
-            --radius: 8px;
-            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-        }
-
-        body {
-            background-color: var(--bg-color);
-            color: var(--text-main);
-            padding: 12px;
-            display: flex;
-            justify-content: center;
-        }
-
-        .container {
-            width: 100%;
-            max-width: 650px;
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-        }
-
-        /* HEADER */
-        header {
-            background-color: var(--card-bg);
-            padding: 16px;
-            border-radius: var(--radius);
-            box-shadow: var(--shadow);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .brand h1 {
-            font-size: 1.25rem;
-            color: var(--primary-color);
-            font-weight: 700;
-        }
-
-        .brand p {
-            font-size: 0.8rem;
-            color: var(--text-muted);
-        }
-
-        .status-badge {
-            font-size: 0.75rem;
-            font-weight: 600;
-            padding: 4px 10px;
-            border-radius: 20px;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .status-online {
-            background-color: #dcfce7;
-            color: #15803d;
-        }
-
-        .status-offline {
-            background-color: #fee2e2;
-            color: #b91c1c;
-        }
-
-        .dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            display: inline-block;
-        }
-
-        .dot-online { background-color: var(--success-color); }
-        .dot-offline { background-color: var(--error-color); }
-
-        /* CARDS */
-        .card {
-            background: var(--card-bg);
-            padding: 16px;
-            border-radius: var(--radius);
-            box-shadow: var(--shadow);
-        }
-
-        /* MODE EDIT BADGE & CARD INDICATOR */
-        .card.edit-mode {
-            border: 2px solid var(--warning-color);
-        }
-
-        .edit-banner {
-            display: none;
-            background-color: #fffbe6;
-            color: #b45309;
-            border: 1px solid #fef3c7;
-            padding: 8px 12px;
-            border-radius: var(--radius);
-            font-size: 0.85rem;
-            font-weight: 600;
-            margin-bottom: 12px;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        /* BUTTONS */
-        .btn {
-            width: 100%;
-            padding: 12px;
-            border: none;
-            border-radius: var(--radius);
-            font-weight: 600;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: background-color 0.2s;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .btn-primary {
-            background-color: var(--primary-color);
-            color: white;
-        }
-
-        .btn-primary:hover {
-            background-color: var(--primary-hover);
-        }
-
-        .btn-warning {
-            background-color: var(--warning-color);
-            color: white;
-        }
-
-        .btn-warning:hover {
-            background-color: #b45309;
-        }
-
-        .btn-secondary {
-            background-color: #e2e8f0;
-            color: var(--text-main);
-        }
-
-        .btn-secondary:hover {
-            background-color: #cbd5e1;
-        }
-
-        .btn-danger {
-            background-color: var(--error-color);
-            color: white;
-        }
-
-        .btn-action-edit {
-            background-color: #fef3c7;
-            color: #b45309;
-            border: 1px solid #fde68a;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            cursor: pointer;
-        }
-
-        .btn-action-edit:hover {
-            background-color: #fde68a;
-        }
-
-        .btn:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-        }
-
-        /* FORM ELEMENTS */
-        .form-group {
-            margin-bottom: 14px;
-            position: relative;
-        }
-
-        label {
-            display: block;
-            font-size: 0.85rem;
-            font-weight: 600;
-            margin-bottom: 6px;
-            color: var(--text-main);
-        }
-
-        label span.req {
-            color: var(--error-color);
-        }
-
-        /* WRAPPER INPUT DENGAN TOMBOL CLEAR "X" */
-        .search-input-wrapper {
-            position: relative;
-            display: flex;
-            align-items: center;
-        }
-
-        .search-input-wrapper input {
-            padding-right: 32px; /* Ruang untuk tombol X */
-        }
-
-        .btn-clear-search {
-            position: absolute;
-            right: 10px;
-            background: none;
-            border: none;
-            font-size: 1.1rem;
-            color: #94a3b8;
-            cursor: pointer;
-            display: none; /* Sembunyi secara default */
-            padding: 2px 6px;
-            line-height: 1;
-            border-radius: 50%;
-        }
-
-        .btn-clear-search:hover {
-            color: #0f172a;
-            background-color: #f1f5f9;
-        }
-
-        input {
-            width: 100%;
-            padding: 10px 12px;
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius);
-            font-size: 0.95rem;
-            outline: none;
-            transition: border-color 0.2s;
-        }
-
-        input:focus {
-            border-color: var(--primary-color);
-        }
-
-        input[readonly] {
-            background-color: #f1f5f9;
-            color: #64748b;
-            cursor: not-allowed;
-        }
-
-        .info-text {
-            font-size: 0.75rem;
-            margin-top: 4px;
-            color: var(--text-muted);
-        }
-
-        /* AUTOCOMPLETE / DROPDOWN SUGGESTIONS */
-        .suggestions-list {
-            position: absolute;
-            top: 100%;
-            left: 0;
-            right: 0;
-            background: white;
-            border: 1px solid var(--border-color);
-            border-radius: 0 0 var(--radius) var(--radius);
-            max-height: 200px;
-            overflow-y: auto;
-            z-index: 100;
-            box-shadow: var(--shadow);
-            display: none;
-        }
-
-        .suggestion-item {
-            padding: 10px 12px;
-            cursor: pointer;
-            border-bottom: 1px solid #f1f5f9;
-        }
-
-        .suggestion-item:hover {
-            background-color: #f8fafc;
-        }
-
-        .suggestion-item .item-code {
-            font-weight: 600;
-            font-size: 0.9rem;
-        }
-
-        .suggestion-item .item-desc {
-            font-size: 0.8rem;
-            color: var(--text-muted);
-        }
-
-
-        /* UPSERT TOGGLE */
-        .upsert-toggle-wrapper {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-top: 12px;
-            padding: 10px 14px;
-            background: #f1f5f9;
-            border-radius: var(--radius);
-            border: 1px solid var(--border-color);
-        }
-
-        .upsert-toggle-label {
-            font-size: 0.875rem;
-            font-weight: 600;
-            color: var(--text-main);
-            flex: 1;
-        }
-
-        .toggle-switch {
-            position: relative;
-            display: inline-block;
-            width: 44px;
-            height: 24px;
-            flex-shrink: 0;
-        }
-
-        .toggle-switch input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-
-        .toggle-slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background-color: #cbd5e1;
-            border-radius: 24px;
-            transition: 0.3s;
-        }
-
-        .toggle-slider:before {
-            position: absolute;
-            content: "";
-            height: 18px;
-            width: 18px;
-            left: 3px;
-            bottom: 3px;
-            background-color: white;
-            border-radius: 50%;
-            transition: 0.3s;
-        }
-
-        .toggle-switch input:checked + .toggle-slider {
-            background-color: var(--primary-color);
-        }
-
-        .toggle-switch input:checked + .toggle-slider:before {
-            transform: translateX(20px);
-        }
-
-        .upsert-status-on {
-            font-size: 0.8rem;
-            font-weight: 700;
-            color: var(--primary-color);
-            min-width: 28px;
-        }
-
-        .upsert-status-off {
-            font-size: 0.8rem;
-            font-weight: 700;
-            color: var(--text-muted);
-            min-width: 28px;
-        }
-
-        /* QR SCANNER CONTAINER */
-        #scanner-modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.8);
-            z-index: 1000;
-            justify-content: center;
-            align-items: center;
-            padding: 16px;
-        }
-
-        .scanner-box {
-            background: white;
-            width: 100%;
-            max-width: 400px;
-            border-radius: var(--radius);
-            padding: 16px;
-            text-align: center;
-        }
-
-        #reader {
-            width: 100%;
-            border-radius: var(--radius);
-            overflow: hidden;
-            margin-bottom: 12px;
-        }
-
-        /* ALERTS AND NOTIFICATIONS */
-        .alert {
-            padding: 12px;
-            border-radius: var(--radius);
-            font-size: 0.85rem;
-            margin-bottom: 14px;
-            display: none;
-        }
-
-        .alert-error {
-            background-color: #fef2f2;
-            color: var(--error-color);
-            border: 1px solid #fecaca;
-        }
-
-        .alert-success {
-            background-color: #f0fdf4;
-            color: var(--success-color);
-            border: 1px solid #bbf7d0;
-        }
-
-        .alert-warning {
-            background-color: #fffbeb;
-            color: var(--warning-color);
-            border: 1px solid #fef3c7;
-        }
-
-        /* ACTIONS */
-        .action-group {
-            display: flex;
-            gap: 8px;
-            margin-top: 10px;
-        }
-
-        /* LOADING INDICATOR */
-        .loading-overlay {
-            display: none;
-            position: absolute;
-            top:0; left:0; right:0; bottom:0;
-            background: rgba(255, 255, 255, 0.7);
-            border-radius: var(--radius);
-            justify-content: center;
-            align-items: center;
-            font-weight: 600;
-            color: var(--primary-color);
-            z-index: 50;
-        }
-
-        .relative { position: relative; }
-
-        /* TABEL DATA HARI INI */
-        .today-list-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 12px;
-            border-bottom: 2px solid #e2e8f0;
-            padding-bottom: 8px;
-        }
-
-        .today-list-header h2 {
-            font-size: 1rem;
-            color: var(--text-main);
-            font-weight: 700;
-        }
-
-        .today-count {
-            font-size: 0.8rem;
-            background-color: #e2e8f0;
-            padding: 2px 8px;
-            border-radius: 12px;
-            font-weight: 600;
-        }
-
-        .table-responsive {
-            width: 100%;
-            overflow-x: auto;
-            border: 1px solid #e2e8f0;
-            border-radius: var(--radius);
-        }
-
-        .data-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 0.82rem;
-            text-align: left;
-        }
-
-        .data-table th {
-            background-color: #f1f5f9;
-            color: var(--text-main);
-            padding: 8px 10px;
-            font-weight: 700;
-            border-bottom: 1px solid #cbd5e1;
-            white-space: nowrap;
-        }
-
-        .data-table td {
-            padding: 8px 10px;
-            border-bottom: 1px solid #e2e8f0;
-            white-space: nowrap;
-        }
-
-        .data-table tbody tr:nth-child(even) {
-            background-color: #f8fafc;
-        }
-
-        .data-table tbody tr:hover {
-            background-color: #eff6ff;
-        }
-
-        .data-table tfoot td {
-            background-color: #f1f5f9;
-            font-weight: 700;
-            border-top: 2px solid #cbd5e1;
-        }
-
-        .empty-today {
-            text-align: center;
-            font-size: 0.85rem;
-            color: var(--text-muted);
-            padding: 16px;
-        }
-    </style>
-</head>
-<body>
-
-    <div class="container">
-        <header>
-            <div class="brand">
-                <h1>STOCK BATCH</h1>
-                <p>Input & Edit Data Stok Firebase</p>
-            </div>
-            <div id="connectionStatus" class="status-badge status-offline">
-                <span class="dot dot-offline"></span> <span id="statusText">Checking...</span>
-            </div>
-        </header>
-
-        <div id="mainFormCard" class="card relative">
-            <div id="loadingOverlay" class="loading-overlay">
-                <span id="loadingText">Memuat Data...</span>
-            </div>
-
-            <div id="editBanner" class="edit-banner">
-                <span>✏️ PERBAIKAN DATA (MODE EDIT)</span>
-                <span style="font-size:0.75rem; font-weight:normal;">ID: <span id="editingRecordId">-</span></span>
-            </div>
-
-            <div id="alertBox" class="alert"></div>
-
-            <button type="button" id="btnScanQR" class="btn btn-primary" style="margin-bottom: 16px;">
-                📷 SCAN QR
-            </button>
-
-            <form id="stockForm" autocomplete="off" onsubmit="return false;">
-                <div class="form-group">
-                    <label for="itemCode">Item Code <span class="req">*</span></label>
-                    <div class="search-input-wrapper">
-                        <input type="text" id="itemCode" placeholder="Ketik nomor/nama item..." required>
-                        <button type="button" id="btnClearItemCode" class="btn-clear-search" title="Reset Pencarian">✕</button>
-                    </div>
-                    <div id="itemSuggestions" class="suggestions-list"></div>
-                </div>
-
-                <div class="form-group">
-                    <label for="itemName">Item Desc</label>
-                    <div class="search-input-wrapper">
-                        <input type="text" id="itemName" placeholder="Ketik kata kunci (misal: java aged)...">
-                        <button type="button" id="btnClearItemName" class="btn-clear-search" title="Reset Pencarian">✕</button>
-                    </div>
-                    <div id="itemNameSuggestions" class="suggestions-list"></div>
-                </div>
-
-                <div class="form-group">
-                    <label for="batchInput">Batch <span class="req">*</span></label>
-                    <input type="text" id="batchInput" placeholder="Pilih/Ketik Batch..." required>
-                    <div id="batchSuggestions" class="suggestions-list"></div>
-                    <div id="batchInfo" class="info-text"></div>
-                </div>
-
-                <div class="form-group">
-                    <label for="qtyInInput">Qty In</label>
-                    <input type="number" id="qtyInInput" step="any" min="0" placeholder="Masukkan qty in (opsional)">
-                </div>
-
-                <div class="form-group">
-                    <label for="qtyStokInput">Qty Stok</label>
-                    <input type="number" id="qtyStokInput" step="any" min="0" placeholder="Masukkan qty stok (opsional)">
-                    <div id="lastStockInfo" class="info-text">💡 Stok terakhir: -</div>
-                </div>
-
-                <div class="form-group">
-                    <label for="remarkInput">Remark</label>
-                    <input type="text" id="remarkInput" placeholder="Contoh: Palet 12 (opsional)">
-                    <div id="remarkSuggestions" class="suggestions-list"></div>
-                </div>
-
-                <div class="form-group">
-                    <label for="posisiInput">Posisi</label>
-                    <input type="text" id="posisiInput" placeholder="Contoh: Rak A1 (opsional)">
-                </div>
-
-                <div class="form-group">
-                    <label>Tanggal Transaksi</label>
-                    <input type="text" id="displayTanggal" readonly>
-                </div>
-
-                <div class="upsert-toggle-wrapper">
-                    <span class="upsert-toggle-label">Mode Upsert</span>
-                    <label class="toggle-switch">
-                        <input type="checkbox" id="upsertToggle">
-                        <span class="toggle-slider"></span>
-                    </label>
-                    <span id="upsertToggleStatus" class="upsert-status-off">OFF</span>
-                </div>
-
-                <button type="button" id="btnSave" class="btn btn-primary" style="margin-top: 8px;">
-                    SIMPAN DATA
-                </button>
-
-                <div class="action-group">
-                    <button type="button" id="btnResetAll" class="btn btn-secondary">
-                        INPUT ITEM BARU
-                    </button>
-                </div>
-            </form>
-        </div>
-
-        <div class="card">
-            <div class="today-list-header">
-                <h2>📊 Tabel Input Hari Ini</h2>
-                <span id="todayCount" class="today-count">0 Item</span>
-            </div>
-
-            <div class="form-group" style="margin-bottom: 12px; position: relative;">
-                <input type="text" id="tableSearchInput" placeholder="🔍 Cari item name, item code, atau batch..." autocomplete="off">
-                <div id="tableSearchSuggestions" class="suggestions-list"></div>
-            </div>
-
-            <div class="table-responsive">
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>Jam</th>
-                            <th>Item Name</th>
-                            <th>Batch</th>
-                            <th>In</th>
-                            <th>Stok</th>
-                            <th>Item Code</th>
-                            <th>Remark</th>
-                            <th>Aksi</th>
-                        </tr>
-                    </thead>
-                    <tbody id="todayTableBody">
-                        <tr>
-                            <td colspan="7" class="empty-today">Belum ada data diinput hari ini.</td>
-                        </tr>
-                    </tbody>
-                    <tfoot>
-                        <tr>
-                            <td colspan="3" style="text-align: right;">Total:</td>
-                            <td id="todayTotalIn" style="color: var(--success-color); font-weight:700;">0</td>
-                            <td id="todayTotalStok" style="color: var(--primary-color); font-weight:700;">0</td>
-                            <td colspan="3"></td>
-                        </tr>
-                    </tfoot>
-                </table>
-            </div>
-        </div>
-    </div>
-
-    <div id="scanner-modal">
-        <div class="scanner-box">
-            <h3 style="margin-bottom: 12px;">Scan QR Item Code</h3>
-            <div id="reader"></div>
-            <button type="button" id="btnCloseScanner" class="btn btn-danger">TUTUP SCANNER</button>
-        </div>
-    </div>
-
-    <script>
-        /* CONFIGURATION */
-        const FIREBASE_DB_URL = "https://ambil-data-dd0d1-default-rtdb.asia-southeast1.firebasedatabase.app";
-        const DATA_PATH = "data_stok";
-        const ENDPOINT_URL = `${FIREBASE_DB_URL}/${DATA_PATH}.json`;
-        const LOCAL_STORAGE_REMARKS_KEY = "stock_app_saved_remarks";
-
-        /* STATE MANAGEMENT */
-        let stockData = []; // Cache lokal data Firebase
-        let html5QrCode = null;
-        let isSaving = false;
-        let selectedItemCode = "";
-        let currentEditId = null; // ID firebase saat mode edit (null jika input baru)
-
-        /* INITIALIZATION */
-        document.addEventListener("DOMContentLoaded", () => {
-            initDateDisplay();
-            fetchFirebaseData();
-            setupEventListeners();
-        });
-
-        function initDateDisplay() {
-            const today = new Date();
-            const day = String(today.getDate()).padStart(2, '0');
-            const month = String(today.getMonth() + 1).padStart(2, '0');
-            const year = today.getFullYear();
-            document.getElementById("displayTanggal").value = `${day}/${month}/${year}`;
-        }
-
-        function getTodayISOString() {
-            const today = new Date();
-            const year = today.getFullYear();
-            const month = String(today.getMonth() + 1).padStart(2, '0');
-            const day = String(today.getDate()).padStart(2, '0');
-            return `${year}-${month}-${day}`;
-        }
-
-        /* FIREBASE API FUNCTIONS */
-        async function fetchFirebaseData() {
-            showLoading(true, "Memuat data Firebase...");
-            try {
-                const response = await fetch(ENDPOINT_URL);
-                if (!response.ok) throw new Error("Gagal terhubung ke database.");
-                
-                const data = await response.json();
-                stockData = [];
-
-                if (data) {
-                    Object.keys(data).forEach(key => {
-                        stockData.push({
-                            _id: key,
-                            ...data[key]
-                        });
-                    });
-                }
-
-                updateConnectionStatus(true);
-                showAlert("", "hide");
-                renderTodayTable();
-                updateLastStockInfo();
-            } catch (error) {
-                console.error("Firebase Error:", error);
-                updateConnectionStatus(false);
-                showAlert("⚠ Firebase tidak dapat diakses atau koneksi terputus.", "error");
-            } finally {
-                showLoading(false);
-            }
-        }
-
-        // Simpan Data Baru (POST)
-        async function saveStockToFirebase(payload) {
-            const response = await fetch(ENDPOINT_URL, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(payload)
-            });
-
-            if (!response.ok) throw new Error("Gagal mengirim data ke Firebase.");
-            return await response.json();
-        }
-
-        // FITUR EDIT: Update Data Lama (PATCH) - Tidak membuat record baru
-        async function updateStockInFirebase(recordId, payload) {
-            const updateUrl = `${FIREBASE_DB_URL}/${DATA_PATH}/${recordId}.json`;
-            const response = await fetch(updateUrl, {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(payload)
-            });
-
-            if (!response.ok) throw new Error("Gagal memperbarui data di Firebase.");
-            return await response.json();
-        }
-
-        /* STATUS INDIKATOR */
-        function updateConnectionStatus(isOnline) {
-            const statusBadge = document.getElementById("connectionStatus");
-            const statusText = document.getElementById("statusText");
-            const dot = statusBadge.querySelector(".dot");
-
-            if (isOnline) {
-                statusBadge.className = "status-badge status-online";
-                dot.className = "dot dot-online";
-                statusText.innerText = "Online";
-            } else {
-                statusBadge.className = "status-badge status-offline";
-                dot.className = "dot dot-offline";
-                statusText.innerText = "Offline";
-            }
-        }
-
-        /* EVENT LISTENERS SETUP */
-        function setupEventListeners() {
-            const itemCodeInput = document.getElementById("itemCode");
-            itemCodeInput.addEventListener("input", (e) => {
-                handleSearchInput(e);
-                toggleClearButton("itemCode", "btnClearItemCode");
-            });
-            itemCodeInput.addEventListener("focus", handleSearchInput);
-
-            const itemNameInput = document.getElementById("itemName");
-            itemNameInput.addEventListener("input", (e) => {
-                handleSearchInput(e);
-                toggleClearButton("itemName", "btnClearItemName");
-            });
-            itemNameInput.addEventListener("focus", handleSearchInput);
-
-            // Listener Tombol Reset Pencarian "X"
-            document.getElementById("btnClearItemCode").addEventListener("click", () => {
-                clearSearchInput("itemCode", "itemSuggestions", "btnClearItemCode");
-            });
-            document.getElementById("btnClearItemName").addEventListener("click", () => {
-                clearSearchInput("itemName", "itemNameSuggestions", "btnClearItemName");
-            });
-
-            const batchInput = document.getElementById("batchInput");
-            batchInput.addEventListener("focus", showBatchSuggestions);
-            batchInput.addEventListener("input", checkCustomBatchInput);
-
-            const remarkInput = document.getElementById("remarkInput");
-            remarkInput.addEventListener("focus", handleRemarkInput);
-            remarkInput.addEventListener("input", handleRemarkInput);
-
-            document.addEventListener("click", (e) => {
-                if (!e.target.closest("#itemCode") && !e.target.closest("#itemSuggestions") && !e.target.closest("#btnClearItemCode")) {
-                    hideElement("itemSuggestions");
-                }
-                if (!e.target.closest("#itemName") && !e.target.closest("#itemNameSuggestions") && !e.target.closest("#btnClearItemName")) {
-                    hideElement("itemNameSuggestions");
-                }
-                if (!e.target.closest("#batchInput") && !e.target.closest("#batchSuggestions")) {
-                    hideElement("batchSuggestions");
-                }
-                if (!e.target.closest("#remarkInput") && !e.target.closest("#remarkSuggestions")) {
-                    hideElement("remarkSuggestions");
-                }
-            });
-
-            // UPSERT TOGGLE — init dari localStorage
-            const upsertToggle = document.getElementById("upsertToggle");
-            const upsertStatus = document.getElementById("upsertToggleStatus");
-
-            function applyUpsertToggleUI(isOn) {
-                upsertStatus.textContent = isOn ? "ON" : "OFF";
-                upsertStatus.className = isOn ? "upsert-status-on" : "upsert-status-off";
-            }
-
-            const savedUpsert = localStorage.getItem("upsertMode");
-            const initUpsert = savedUpsert === null ? false : savedUpsert === "true";
-            upsertToggle.checked = initUpsert;
-            applyUpsertToggleUI(initUpsert);
-
-            upsertToggle.addEventListener("change", () => {
-                const isOn = upsertToggle.checked;
-                localStorage.setItem("upsertMode", isOn);
-                applyUpsertToggleUI(isOn);
-            });
-
-            document.getElementById("btnScanQR").addEventListener("click", startQRScanner);
-            document.getElementById("btnCloseScanner").addEventListener("click", stopQRScanner);
-            document.getElementById("btnSave").addEventListener("click", handleSave);
-            document.getElementById("btnResetAll").addEventListener("click", resetFullForm);
-
-            // Search tabel hari ini
-            const tableSearch = document.getElementById("tableSearchInput");
-            if (tableSearch) {
-                tableSearch.addEventListener("input", () => renderTodayTable());
-                tableSearch.addEventListener("focus", () => renderTodayTable());
-            }
-
-            document.addEventListener("click", (e) => {
-                if (!e.target.closest("#tableSearchInput") && !e.target.closest("#tableSearchSuggestions")) {
-                    const s = document.getElementById("tableSearchSuggestions");
-                    if (s) s.style.display = "none";
-                }
-            });
-        }
-
-        /* LOGIKA RESET PENCARIAN ITEM */
-        function clearSearchInput(inputId, suggestionId, clearBtnId) {
-            const inputElem = document.getElementById(inputId);
-            inputElem.value = "";
-            
-            hideElement(suggestionId);
-            hideElement(clearBtnId);
-            
-            if (inputId === "itemCode") {
-                document.getElementById("itemName").value = "";
-                hideElement("btnClearItemName");
-                selectedItemCode = "";
-                updateLastStockInfo();
-            }
-            
-            inputElem.focus();
-        }
-
-        function toggleClearButton(inputId, clearBtnId) {
-            const val = document.getElementById(inputId).value.trim();
-            if (val.length > 0) {
-                showElement(clearBtnId);
-            } else {
-                hideElement(clearBtnId);
-            }
-        }
-
-        /* SMART SEARCH MULTI-KEYWORD LOGIC */
-        function handleSearchInput(e) {
-            const targetId = e.target.id;
-            const query = e.target.value.trim().toLowerCase();
-            const suggestionsContainer = document.getElementById(targetId === "itemCode" ? "itemSuggestions" : "itemNameSuggestions");
-
-            if (!query) {
-                suggestionsContainer.innerHTML = "";
-                hideElement(suggestionsContainer.id);
-                return;
-            }
-
-            const tokens = query.split(/\s+/).filter(t => t.length > 0);
-            const uniqueItemsMap = new Map();
-
-            stockData.forEach(item => {
-                const codeStr = String(item.itemnumber || "").toLowerCase();
-                const descStr = String(item.itemname || "").toLowerCase();
-                const combinedStr = `${codeStr} ${descStr}`;
-
-                const isMatch = tokens.every(token => combinedStr.includes(token));
-
-                if (isMatch) {
-                    if (!uniqueItemsMap.has(item.itemnumber)) {
-                        uniqueItemsMap.set(item.itemnumber, item.itemname || "-");
-                    }
-                }
-            });
-
-            const suggestions = Array.from(uniqueItemsMap.entries()).slice(0, 10);
-
-            if (suggestions.length === 0) {
-                suggestionsContainer.innerHTML = `<div class="suggestion-item"><em>Data tidak ditemukan</em></div>`;
-                showElement(suggestionsContainer.id);
-                return;
-            }
-
-            suggestionsContainer.innerHTML = suggestions.map(([code, name]) => `
-                <div class="suggestion-item" onclick="selectItem('${escapeHtml(code)}')">
-                    <div class="item-code">${escapeHtml(code)}</div>
-                    <div class="item-desc">${escapeHtml(name)}</div>
-                </div>
-            `).join("");
-
-            showElement(suggestionsContainer.id);
-        }
-
-        function selectItem(itemCode) {
-            document.getElementById("itemCode").value = itemCode;
-            toggleClearButton("itemCode", "btnClearItemCode");
-            hideElement("itemSuggestions");
-            hideElement("itemNameSuggestions");
-            processSelectedItem(itemCode);
-        }
-
-        function processSelectedItem(itemCode) {
-            selectedItemCode = itemCode;
-            
-            const itemRecords = stockData.filter(d => d.itemnumber === itemCode);
-
-            if (itemRecords.length === 0) {
-                showAlert(`⚠ ITEM TIDAK DITEMUKAN<br><br>Item Code: <b>${escapeHtml(itemCode)}</b><br>Data item tidak ditemukan di Firebase. Silakan periksa QR atau Item Code.`, "error");
-                document.getElementById("itemName").value = "";
-                hideElement("btnClearItemName");
-                document.getElementById("batchInput").value = "";
-                document.getElementById("batchInfo").innerText = "";
-                setFormInputsEnabled(false);
-                updateLastStockInfo();
-                return;
-            }
-
-            const itemName = itemRecords[0].itemname || "-";
-            document.getElementById("itemName").value = itemName;
-            toggleClearButton("itemName", "btnClearItemName");
-            showAlert("", "hide");
-            setFormInputsEnabled(true);
-
-            if (!currentEditId) {
-                processBatchSelection(itemRecords);
-            }
-        }
-
-        /* REMARK LOCALSTORAGE FUNCTIONS */
-        function getSavedRemarks() {
-            try {
-                const saved = localStorage.getItem(LOCAL_STORAGE_REMARKS_KEY);
-                return saved ? JSON.parse(saved) : [];
-            } catch (e) { return []; }
-        }
-
-        function saveRemarkToLocalStorage(remarkText) {
-            if (!remarkText) return;
-            let remarks = getSavedRemarks();
-            remarks = remarks.filter(r => r.toLowerCase() !== remarkText.toLowerCase());
-            remarks.unshift(remarkText);
-            if (remarks.length > 20) remarks = remarks.slice(0, 20);
-            try {
-                localStorage.setItem(LOCAL_STORAGE_REMARKS_KEY, JSON.stringify(remarks));
-            } catch (e) {}
-        }
-
-        function handleRemarkInput(e) {
-            const query = e.target.value.trim().toLowerCase();
-            const suggestionsContainer = document.getElementById("remarkSuggestions");
-            const savedRemarks = getSavedRemarks();
-
-            if (savedRemarks.length === 0) {
-                hideElement("remarkSuggestions");
-                return;
-            }
-
-            const filtered = savedRemarks.filter(r => r.toLowerCase().includes(query));
-            if (filtered.length === 0) {
-                hideElement("remarkSuggestions");
-                return;
-            }
-
-            suggestionsContainer.innerHTML = filtered.map(r => `
-                <div class="suggestion-item" onclick="selectRemark('${escapeHtml(r)}')">
-                    <div class="item-code">${escapeHtml(r)}</div>
-                </div>
-            `).join("");
-
-            showElement("remarkSuggestions");
-        }
-
-        function selectRemark(val) {
-            document.getElementById("remarkInput").value = val;
-            hideElement("remarkSuggestions");
-        }
-
-        /* BATCH SELECTION LOGIC */
-        function processBatchSelection(itemRecords) {
-            const today = new Date();
-            today.setHours(23, 59, 59, 999);
-            
-            const thirtyDaysAgo = new Date(today);
-            thirtyDaysAgo.setDate(today.getDate() - 30);
-            thirtyDaysAgo.setHours(0, 0, 0, 0);
-
-            function parseRecordDate(dateStr) {
-                if (!dateStr) return null;
-                const parts = String(dateStr).trim().split('-');
-                if (parts.length === 3) {
-                    return new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
-                }
-                return null;
-            }
-
-            const recentRecords = itemRecords.filter(r => {
-                if (!r.batch) return false;
-                const recDate = parseRecordDate(r.tanggal);
-                return recDate && recDate >= thirtyDaysAgo && recDate <= today;
-            });
-
-            const recordsToProcess = recentRecords.length > 0 ? recentRecords : itemRecords.filter(r => r.batch);
-
-            if (recordsToProcess.length === 0) {
-                document.getElementById("batchInput").value = "";
-                document.getElementById("batchInfo").innerText = "Tidak ada data batch. Silakan isi batch secara manual.";
-                document.getElementById("batchInfo").style.color = "var(--warning-color)";
-                window.currentSortedBatches = [];
-                updateLastStockInfo();
-                return;
-            }
-
-            const batchMap = new Map();
-            recordsToProcess.forEach(r => {
-                const b = String(r.batch).trim();
-                if (!b) return;
-
-                const recordDateStr = String(r.tanggal || "");
-                const uploadedAt = String(r.uploaded_at || "");
-
-                if (!batchMap.has(b)) {
-                    batchMap.set(b, { tanggal: recordDateStr, uploaded_at: uploadedAt, record: r });
-                } else {
-                    const existing = batchMap.get(b);
-                    if (recordDateStr > existing.tanggal) {
-                        batchMap.set(b, { tanggal: recordDateStr, uploaded_at: uploadedAt, record: r });
-                    } else if (recordDateStr === existing.tanggal && uploadedAt > existing.uploaded_at) {
-                        batchMap.set(b, { tanggal: recordDateStr, uploaded_at: uploadedAt, record: r });
-                    }
-                }
-            });
-
-            const sortedBatches = Array.from(batchMap.entries()).sort((a, b) => {
-                if (b[1].tanggal !== a[1].tanggal) return b[1].tanggal.localeCompare(a[1].tanggal);
-                return b[1].uploaded_at.localeCompare(a[1].uploaded_at);
-            });
-
-            const defaultBatch = sortedBatches[0][0];
-            const latestInfo = sortedBatches[0][1].record;
-
-            document.getElementById("batchInput").value = defaultBatch;
-            window.currentSortedBatches = sortedBatches.map(item => item[0]);
-
-            if (recentRecords.length > 0) {
-                document.getElementById("batchInfo").innerText = `Batch ditemukan (Terakhir: ${formatDisplayDate(latestInfo.tanggal)}, Stok: ${latestInfo.stok})`;
-                document.getElementById("batchInfo").style.color = "var(--text-muted)";
-            } else {
-                document.getElementById("batchInfo").innerText = `Batch terakhir historical: ${defaultBatch}`;
-                document.getElementById("batchInfo").style.color = "var(--warning-color)";
-            }
-
-            updateLastStockInfo();
-        }
-
-        function showBatchSuggestions() {
-            if (!window.currentSortedBatches || window.currentSortedBatches.length === 0) return;
-            const container = document.getElementById("batchSuggestions");
-            container.innerHTML = window.currentSortedBatches.map(b => `
-                <div class="suggestion-item" onclick="selectBatch('${escapeHtml(b)}')">
-                    <div class="item-code">${escapeHtml(b)}</div>
-                </div>
-            `).join("");
-            showElement("batchSuggestions");
-        }
-
-        function selectBatch(batchValue) {
-            document.getElementById("batchInput").value = batchValue;
-            hideElement("batchSuggestions");
-            checkCustomBatchInput();
-        }
-
-        function checkCustomBatchInput() {
-            const currentVal = document.getElementById("batchInput").value.trim();
-            const batchInfo = document.getElementById("batchInfo");
-
-            if (window.currentSortedBatches && window.currentSortedBatches.includes(currentVal)) {
-                batchInfo.innerText = "Batch ditemukan dari data 30 hari terakhir.";
-                batchInfo.style.color = "var(--text-muted)";
-            } else if (currentVal !== "") {
-                batchInfo.innerText = "Batch baru / tidak ditemukan dalam 30 hari terakhir.";
-                batchInfo.style.color = "var(--warning-color)";
-            } else {
-                batchInfo.innerText = "";
-            }
-
-            updateLastStockInfo();
-        }
-
-        /* INFORMASI STOK TERAKHIR */
-        function updateLastStockInfo() {
-            const itemCode = document.getElementById("itemCode").value.trim();
-            const batch = document.getElementById("batchInput").value.trim();
-            const infoElem = document.getElementById("lastStockInfo");
-
-            if (!itemCode || !batch) {
-                infoElem.innerText = "💡 Stok terakhir: -";
-                return;
-            }
-
-            const matchedRecords = stockData.filter(d => 
-                String(d.itemnumber || "").trim() === itemCode && 
-                String(d.batch || "").trim() === batch &&
-                d._id !== currentEditId
-            );
-
-            if (matchedRecords.length === 0) {
-                infoElem.innerText = "💡 Stok terakhir: Belum ada";
-                return;
-            }
-
-            matchedRecords.sort((a, b) => {
-                const dateA = String(a.tanggal || "");
-                const dateB = String(b.tanggal || "");
-                if (dateB !== dateA) return dateB.localeCompare(dateA);
-                return String(b.uploaded_at || "").localeCompare(String(a.uploaded_at || ""));
-            });
-
-            const latestRecord = matchedRecords[0];
-            const lastIn = latestRecord.in !== undefined && latestRecord.in !== null ? latestRecord.in : '-';
-            const lastStok = latestRecord.stok !== undefined && latestRecord.stok !== null ? latestRecord.stok : '-';
-
-            infoElem.innerText = `💡 In terakhir: ${lastIn} | Stok terakhir: ${lastStok}`;
-        }
-
-        /* QR SCANNER INTEGRATION */
-        function startQRScanner() {
-            showElement("scanner-modal");
-            if (!html5QrCode) {
-                html5QrCode = new Html5Qrcode("reader");
-            }
-            const config = { fps: 10, qrbox: { width: 250, height: 250 } };
-            html5QrCode.start(
-                { facingMode: "environment" },
-                config,
-                onScanSuccess,
-                onScanFailure
-            ).catch(err => {
-                console.error("Camera access error:", err);
-                stopQRScanner();
-                showAlert("⚠ Kamera tidak dapat diakses atau izin ditolak.", "error");
-            });
-        }
-
-        function onScanSuccess(decodedText) {
-            const itemCode = decodedText.trim();
-            stopQRScanner();
-            document.getElementById("itemCode").value = itemCode;
-            toggleClearButton("itemCode", "btnClearItemCode");
-            processSelectedItem(itemCode);
-            setTimeout(() => { document.getElementById("qtyInput").focus(); }, 300);
-        }
-
-        function onScanFailure(error) {}
-
-        function stopQRScanner() {
-            if (html5QrCode && html5QrCode.isScanning) {
-                html5QrCode.stop().then(() => { hideElement("scanner-modal"); }).catch(err => { hideElement("scanner-modal"); });
-            } else {
-                hideElement("scanner-modal");
-            }
-        }
-
-        /* FUNGSI MUAT DATA KE FORM UNTUK EDIT */
-        function startEditRecord(recordId) {
-            const target = stockData.find(d => d._id === recordId);
-            if (!target) {
-                showAlert("⚠ Data tidak ditemukan di memori.", "error");
-                return;
-            }
-
-            currentEditId = recordId;
-
-            // Isi nilai form dari record yang akan di-edit
-            document.getElementById("itemCode").value = target.itemnumber || "";
-            toggleClearButton("itemCode", "btnClearItemCode");
-
-            document.getElementById("itemName").value = target.itemname || "";
-            toggleClearButton("itemName", "btnClearItemName");
-
-            document.getElementById("batchInput").value = target.batch || "";
-            document.getElementById("qtyInInput").value = target.in !== undefined && target.in !== null ? target.in : "";
-            document.getElementById("qtyStokInput").value = target.stok !== undefined && target.stok !== null ? target.stok : "";
-            document.getElementById("remarkInput").value = target.remark || "";
-            document.getElementById("posisiInput").value = target.posisi || "";
-
-            if (target.tanggal) {
-                const parts = target.tanggal.split("-");
-                if (parts.length === 3) {
-                    document.getElementById("displayTanggal").value = `${parts[2]}/${parts[1]}/${parts[0]}`;
-                }
-            }
-
-            // Ubah Tampilan UI ke Mode Edit
-            document.getElementById("mainFormCard").classList.add("edit-mode");
-            document.getElementById("editBanner").style.display = "flex";
-            document.getElementById("editingRecordId").innerText = recordId;
-            
-            const btnSave = document.getElementById("btnSave");
-            btnSave.innerText = "UPDATE DATA";
-            btnSave.className = "btn btn-warning";
-
-            setFormInputsEnabled(true);
-            updateLastStockInfo();
-            showAlert(`✏️ Anda sedang mengubah data untuk <b>${escapeHtml(target.itemnumber)}</b>. Klik "UPDATE DATA" untuk menyimpan perubahan.`, "warning");
-
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-
-        /* LOGIKA SIMPAN / UPDATE DENGAN PATCH */
-        async function handleSave() {
-            if (isSaving) return;
-
-            const itemCode = document.getElementById("itemCode").value.trim();
-            const itemName = document.getElementById("itemName").value.trim();
-            const batch = document.getElementById("batchInput").value.trim();
-            const qtyInStr = document.getElementById("qtyInInput").value;
-            const qtyStokStr = document.getElementById("qtyStokInput").value;
-            const qtyIn = qtyInStr !== "" ? parseFloat(qtyInStr) : null;
-            const qtyStok = qtyStokStr !== "" ? parseFloat(qtyStokStr) : null;
-            const remark = document.getElementById("remarkInput").value.trim();
-            const posisi = document.getElementById("posisiInput").value.trim();
-
-            if (!itemCode) {
-                showAlert("⚠ Item Code belum diisi.", "error");
-                return;
-            }
-            if (!itemName) {
-                showAlert("⚠ Data Item Desc kosong. Pastikan Item Code valid.", "error");
-                return;
-            }
-            if (!batch) {
-                showAlert("⚠ Batch tidak boleh kosong.", "error");
-                return;
-            }
-            if (qtyIn === null && qtyStok === null) {
-                showAlert("⚠ Minimal salah satu Qty In atau Qty Stok harus diisi.", "error");
-                return;
-            }
-            if (qtyIn !== null && (isNaN(qtyIn) || qtyIn < 0)) {
-                showAlert("⚠ Qty In harus berupa angka dan tidak boleh negatif.", "error");
-                return;
-            }
-            if (qtyStok !== null && (isNaN(qtyStok) || qtyStok < 0)) {
-                showAlert("⚠ Qty Stok harus berupa angka dan tidak boleh negatif.", "error");
-                return;
-            }
-
-            isSaving = true;
-            document.getElementById("btnSave").disabled = true;
-
-            try {
-                if (currentEditId) {
-                    // MODE EDIT (PATCH OVERWRITE)
-                    showLoading(true, "Memperbarui data di Firebase...");
-
-                    const payloadUpdate = {
-                        batch: batch,
-                        itemname: itemName,
-                        itemnumber: itemCode,
-                        remark: remark || "",
-                        posisi: posisi || "",
-                        updated_at: new Date().toISOString()
-                    };
-                    if (qtyIn !== null) payloadUpdate.in = qtyIn;
-                    if (qtyStok !== null) payloadUpdate.stok = qtyStok;
-
-                    await updateStockInFirebase(currentEditId, payloadUpdate);
-
-                    const index = stockData.findIndex(d => d._id === currentEditId);
-                    if (index !== -1) {
-                        stockData[index] = { ...stockData[index], ...payloadUpdate };
-                    }
-
-                    showAlert(`✓ DATA BERHASIL DIPERBARUI<br><br>Item: <b>${escapeHtml(itemCode)}</b><br>Batch: <b>${escapeHtml(batch)}</b>${qtyIn !== null ? `<br>Qty In: <b>${qtyIn}</b>` : ''}${qtyStok !== null ? `<br>Qty Stok: <b>${qtyStok}</b>` : ''}`, "success");
-                    
-                    resetFullForm();
-
-                } else {
-                    // MODE INPUT BARU (POST)
-                    const upsertModeOn = document.getElementById("upsertToggle").checked;
-                    const todayISO = getTodayISOString();
-
-                    const existing = upsertModeOn
-                        ? stockData.find(d =>
-                            String(d.itemnumber).trim() === itemCode &&
-                            String(d.batch).trim() === batch &&
-                            String(d.tanggal).trim() === todayISO
-                          )
-                        : null;
-
-                    if (upsertModeOn) {
-                        showLoading(true, "Memeriksa data duplikat...");
-                    } else {
-                        showLoading(true, "Menyimpan data baru...");
-                    }
-
-                    if (existing) {
-                        // UPSERT: akumulasi field yang diisi saja
-                        showLoading(true, "Menambah qty ke record yang sudah ada...");
-
-                        const payloadUpdate = { updated_at: new Date().toISOString() };
-                        let alertDetail = "";
-
-                        if (qtyIn !== null) {
-                            const inLama = parseFloat(existing.in) || 0;
-                            const inBaru = inLama + qtyIn;
-                            payloadUpdate.in = inBaru;
-                            alertDetail += `<br>Qty In: <b>${inLama}</b> + <b>${qtyIn}</b> = <b>${inBaru}</b>`;
-                        }
-                        if (qtyStok !== null) {
-                            const stokLama = parseFloat(existing.stok) || 0;
-                            const stokBaru = stokLama + qtyStok;
-                            payloadUpdate.stok = stokBaru;
-                            alertDetail += `<br>Qty Stok: <b>${stokLama}</b> + <b>${qtyStok}</b> = <b>${stokBaru}</b>`;
-                        }
-
-                        await updateStockInFirebase(existing._id, payloadUpdate);
-
-                        const index = stockData.findIndex(d => d._id === existing._id);
-                        if (index !== -1) {
-                            stockData[index] = { ...stockData[index], ...payloadUpdate };
-                        }
-
-                        showAlert(
-                            `✓ QTY BERHASIL DITAMBAHKAN<br><br>Item: <b>${escapeHtml(itemCode)}</b><br>Batch: <b>${escapeHtml(batch)}</b>${alertDetail}`,
-                            "success"
-                        );
-
-                        document.getElementById("qtyInInput").value = "";
-                        document.getElementById("qtyStokInput").value = "";
-                        document.getElementById("remarkInput").value = "";
-                        document.getElementById("posisiInput").value = "";
-
-                        const itemRecordsU = stockData.filter(d => d.itemnumber === itemCode);
-                        processBatchSelection(itemRecordsU);
-
-                    } else {
-                        // INSERT BARU: belum ada record dengan kombinasi ini
-                        showLoading(true, "Menyimpan data baru...");
-
-                        const payloadNew = {
-                            batch: batch,
-                            itemname: itemName,
-                            itemnumber: itemCode,
-                            remark: remark || "",
-                            posisi: posisi || "",
-                            tanggal: todayISO,
-                            uploaded_at: new Date().toISOString()
-                        };
-                        if (qtyIn !== null) payloadNew.in = qtyIn;
-                        if (qtyStok !== null) payloadNew.stok = qtyStok;
-
-                        const response = await saveStockToFirebase(payloadNew);
-
-                        if (remark) saveRemarkToLocalStorage(remark);
-
-                        stockData.push({
-                            _id: response.name,
-                            ...payloadNew
-                        });
-
-                        showAlert(`✓ DATA BERHASIL DISIMPAN<br><br>Item: <b>${escapeHtml(itemCode)}</b><br>Batch: <b>${escapeHtml(batch)}</b>${qtyIn !== null ? `<br>Qty In: <b>${qtyIn}</b>` : ''}${qtyStok !== null ? `<br>Qty Stok: <b>${qtyStok}</b>` : ''}`, "success");
-
-                        document.getElementById("qtyInInput").value = "";
-                        document.getElementById("qtyStokInput").value = "";
-                        document.getElementById("remarkInput").value = "";
-                        document.getElementById("posisiInput").value = "";
-
-                        const itemRecordsN = stockData.filter(d => d.itemnumber === itemCode);
-                        processBatchSelection(itemRecordsN);
-                    }
-                }
-
-                if (remark) saveRemarkToLocalStorage(remark);
-                renderTodayTable();
-
-            } catch (error) {
-                console.error("Save/Update Error:", error);
-                showAlert("⚠ Gagal menyimpan/memperbarui data ke Firebase. Periksa koneksi internet.", "error");
-            } finally {
-                isSaving = false;
-                document.getElementById("btnSave").disabled = false;
-                showLoading(false);
-            }
-        }
-
-        /* RENDER TABEL DAFTAR INPUT HARI INI */
-        function renderTodayTable() {
-            const todayISO = getTodayISOString();
-            const tbody = document.getElementById("todayTableBody");
-            const searchQuery = document.getElementById("tableSearchInput")
-                ? document.getElementById("tableSearchInput").value.trim().toLowerCase()
-                : "";
-
-            let todayData = stockData.filter(item => String(item.tanggal) === todayISO);
-            todayData.sort((a, b) => String(b.uploaded_at || "").localeCompare(String(a.uploaded_at || "")));
-
-            // Filter berdasarkan search
-            const filteredData = searchQuery
-                ? todayData.filter(item => {
-                    const combined = `${item.itemnumber || ""} ${item.itemname || ""} ${item.batch || ""}`.toLowerCase();
-                    return combined.includes(searchQuery);
-                })
-                : todayData;
-
-            document.getElementById("todayCount").innerText = `${filteredData.length}${searchQuery ? `/${todayData.length}` : ""} Item`;
-
-            const totalIn = filteredData.reduce((sum, item) => sum + (parseFloat(item.in) || 0), 0);
-            const totalStok = filteredData.reduce((sum, item) => sum + (parseFloat(item.stok) || 0), 0);
-            document.getElementById("todayTotalIn").innerText = totalIn.toLocaleString("id-ID");
-            document.getElementById("todayTotalStok").innerText = totalStok.toLocaleString("id-ID");
-
-            if (filteredData.length === 0) {
-                const msg = searchQuery ? "Tidak ada data yang cocok dengan pencarian." : "Belum ada data diinput hari ini.";
-                tbody.innerHTML = `<tr><td colspan="8" class="empty-today">${msg}</td></tr>`;
-                return;
-            }
-
-            tbody.innerHTML = filteredData.map(item => {
-                const timeStr = item.uploaded_at ? new Date(item.uploaded_at).toLocaleTimeString("id-ID", { hour: '2-digit', minute: '2-digit' }) : '-';
-                const inVal = item.in !== undefined && item.in !== null ? item.in : '-';
-                const stokVal = item.stok !== undefined && item.stok !== null ? item.stok : '-';
-                return `
-                    <tr>
-                        <td>${timeStr}</td>
-                        <td><b>${escapeHtml(item.itemname)}</b></td>
-                        <td>${escapeHtml(item.batch)}</td>
-                        <td style="color: var(--success-color); font-weight:700;">${inVal}</td>
-                        <td style="color: var(--primary-color); font-weight:700;">${stokVal}</td>
-                        <td><b>${escapeHtml(item.itemnumber)}</b></td>
-                        <td>${escapeHtml(item.remark || '-')}</td>
-                        <td>
-                            <button type="button" class="btn-action-edit" onclick="startEditRecord('${item._id}')">✏️ Edit</button>
-                        </td>
-                    </tr>
-                `;
-            }).join("");
-
-            // Update autocomplete suggestions dari data hari ini
-            updateTableSearchSuggestions(todayData, searchQuery);
-        }
-
-        /* AUTOCOMPLETE SEARCH TABEL */
-        function updateTableSearchSuggestions(todayData, query) {
-            const container = document.getElementById("tableSearchSuggestions");
-            if (!query || !container) {
-                if (container) container.style.display = "none";
-                return;
-            }
-
-            const seen = new Set();
-            const suggestions = [];
-
-            todayData.forEach(item => {
-                const combined = `${item.itemnumber || ""} ${item.itemname || ""} ${item.batch || ""}`.toLowerCase();
-                if (!combined.includes(query)) return;
-
-                // Suggest itemnumber
-                const key1 = `code:${item.itemnumber}`;
-                if (!seen.has(key1)) {
-                    seen.add(key1);
-                    suggestions.push({ label: item.itemnumber, sub: item.itemname, value: item.itemnumber });
-                }
-
-                // Suggest batch
-                const key2 = `batch:${item.batch}`;
-                if (!seen.has(key2)) {
-                    seen.add(key2);
-                    suggestions.push({ label: item.batch, sub: `Batch — ${item.itemnumber}`, value: item.batch });
-                }
-            });
-
-            if (suggestions.length === 0) {
-                container.style.display = "none";
-                return;
-            }
-
-            container.innerHTML = suggestions.slice(0, 8).map(s => `
-                <div class="suggestion-item" onclick="selectTableSearch('${escapeHtml(s.value)}')">
-                    <div class="item-code">${escapeHtml(s.label)}</div>
-                    <div class="item-desc">${escapeHtml(s.sub)}</div>
-                </div>
-            `).join("");
-            container.style.display = "block";
-        }
-
-        function selectTableSearch(value) {
-            document.getElementById("tableSearchInput").value = value;
-            document.getElementById("tableSearchSuggestions").style.display = "none";
-            renderTodayTable();
-        }
-
-        /* FORM RESET & KELUAR DARI MODE EDIT */
-        function resetFullForm() {
-            currentEditId = null;
-            document.getElementById("stockForm").reset();
-            document.getElementById("itemName").value = "";
-            document.getElementById("batchInfo").innerText = "";
-            
-            hideElement("btnClearItemCode");
-            hideElement("btnClearItemName");
-
-            // UI Reset
-            document.getElementById("mainFormCard").classList.remove("edit-mode");
-            document.getElementById("editBanner").style.display = "none";
-            document.getElementById("editingRecordId").innerText = "-";
-            
-            const btnSave = document.getElementById("btnSave");
-            btnSave.innerText = "SIMPAN DATA";
-            btnSave.className = "btn btn-primary";
-
-            initDateDisplay();
-            selectedItemCode = "";
-            window.currentSortedBatches = [];
-            setFormInputsEnabled(true);
-            showAlert("", "hide");
-            updateLastStockInfo();
-            document.getElementById("itemCode").focus();
-        }
-
-        function setFormInputsEnabled(enabled) {
-            document.getElementById("batchInput").disabled = !enabled;
-            document.getElementById("qtyInInput").disabled = !enabled;
-            document.getElementById("qtyStokInput").disabled = !enabled;
-            document.getElementById("remarkInput").disabled = !enabled;
-            document.getElementById("posisiInput").disabled = !enabled;
-            document.getElementById("btnSave").disabled = !enabled;
-        }
-
-        /* UI UTILITY FUNCTIONS */
-        function showAlert(message, type) {
-            const alertBox = document.getElementById("alertBox");
-            if (type === "hide") {
-                alertBox.style.display = "none";
-                return;
-            }
-            alertBox.className = `alert alert-${type}`;
-            alertBox.innerHTML = message;
-            alertBox.style.display = "block";
-        }
-
-        function showLoading(show, text = "Memuat...") {
-            const overlay = document.getElementById("loadingOverlay");
-            document.getElementById("loadingText").innerText = text;
-            overlay.style.display = show ? "flex" : "none";
-        }
-
-        function showElement(id) { document.getElementById(id).style.display = "block"; }
-        function hideElement(id) { document.getElementById(id).style.display = "none"; }
-
-        function formatDisplayDate(dateStr) {
-            if (!dateStr) return "-";
-            const parts = dateStr.split("-");
-            if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
-            return dateStr;
-        }
-
-        function escapeHtml(text) {
-            if (!text) return "";
-            return String(text)
-                .replace(/&/g, "&amp;")
-                .replace(/</g, "&lt;")
-                .replace(/>/g, "&gt;")
-                .replace(/"/g, "&quot;")
-                .replace(/'/g, "&#039;");
-        }
-    </script>
-</body>
+<!DOCTYPE html> 
+<html lang="id"> 
+<head> 
+<meta charset="UTF-8"> 
+<meta name="viewport" content="width=device-width, initial-scale=1.0"> 
+<title>Stock Batch Input</title> 
+<link rel="icon" type="image/svg+xml" href="favicon.svg"> 
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script> 
+<style> 
+:root { 
+  --primary-color: #2563eb; 
+  --primary-hover: #1d4ed8; 
+  --bg-color: #f8fafc; 
+  --card-bg: #ffffff; 
+  --text-main: #0f172a; 
+  --text-muted: #64748b; 
+  --border-color: #cbd5e1; 
+  --success-color: #16a34a; 
+  --error-color: #dc2626; 
+  --warning-color: #d97706; 
+  --radius: 8px; 
+  --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); 
+} 
+* { 
+  box-sizing: border-box; 
+  margin: 0; 
+  padding: 0; 
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+} 
+body { 
+  background-color: var(--bg-color); 
+  color: var(--text-main); 
+  padding: 12px; 
+  display: flex; 
+  justify-content: center; 
+} 
+.container { 
+  width: 100%; 
+  max-width: 650px; 
+  display: flex; 
+  flex-direction: column; 
+  gap: 16px; 
+} 
+/* HEADER */ 
+header { 
+  background-color: var(--card-bg); 
+  padding: 16px; 
+  border-radius: var(--radius); 
+  box-shadow: var(--shadow); 
+  display: flex; 
+  justify-content: space-between; 
+  align-items: center; 
+} 
+.brand h1 { 
+  font-size: 1.25rem; 
+  color: var(--primary-color); 
+  font-weight: 700; 
+} 
+.brand p { 
+  font-size: 0.8rem; 
+  color: var(--text-muted); 
+} 
+.status-badge { 
+  font-size: 0.75rem; 
+  font-weight: 600; 
+  padding: 4px 10px; 
+  border-radius: 20px; 
+  display: flex; 
+  align-items: center; 
+  gap: 6px; 
+} 
+.status-online { 
+  background-color: #dcfce7; 
+  color: #15803d; 
+} 
+.status-offline { 
+  background-color: #fee2e2; 
+  color: #b91c1c; 
+} 
+.dot { 
+  width: 8px; 
+  height: 8px; 
+  border-radius: 50%; 
+  display: inline-block; 
+} 
+.dot-online { 
+  background-color: var(--success-color); 
+} 
+.dot-offline { 
+  background-color: var(--error-color); 
+} 
+/* CARDS */ 
+.card { 
+  background: var(--card-bg); 
+  padding: 16px; 
+  border-radius: var(--radius); 
+  box-shadow: var(--shadow); 
+} 
+/* MODE EDIT BADGE & CARD INDICATOR */ 
+.card.edit-mode { 
+  border: 2px solid var(--warning-color); 
+} 
+.edit-banner { 
+  display: none; 
+  background-color: #fffbe6; 
+  color: #b45309; 
+  border: 1px solid #fef3c7; 
+  padding: 8px 12px; 
+  border-radius: var(--radius); 
+  font-size: 0.85rem; 
+  font-weight: 600; 
+  margin-bottom: 12px; 
+  justify-content: space-between; 
+  align-items: center; 
+} 
+/* BUTTONS */ 
+.btn { 
+  width: 100%; 
+  padding: 12px; 
+  border: none; 
+  border-radius: var(--radius); 
+  font-weight: 600; 
+  font-size: 1rem; 
+  cursor: pointer; 
+  transition: background-color 0.2s; 
+  display: flex; 
+  justify-content: center; 
+  align-items: center; 
+  gap: 8px; 
+} 
+.btn-primary { 
+  background-color: var(--primary-color); 
+  color: white; 
+} 
+.btn-primary:hover { 
+  background-color: var(--primary-hover); 
+} 
+.btn-warning { 
+  background-color: var(--warning-color); 
+  color: white; 
+} 
+.btn-warning:hover { 
+  background-color: #b45309; 
+} 
+.btn-secondary { 
+  background-color: #e2e8f0; 
+  color: var(--text-main); 
+} 
+.btn-secondary:hover { 
+  background-color: #cbd5e1; 
+} 
+.btn-danger { 
+  background-color: var(--error-color); 
+  color: white; 
+} 
+.btn-action-edit { 
+  background-color: #fef3c7; 
+  color: #b45309; 
+  border: 1px solid #fde68a; 
+  padding: 4px 8px; 
+  border-radius: 4px; 
+  font-size: 0.75rem; 
+  font-weight: 600; 
+  cursor: pointer; 
+} 
+.btn-action-edit:hover { 
+  background-color: #fde68a; 
+} 
+.btn:disabled { 
+  opacity: 0.6; 
+  cursor: not-allowed; 
+} 
+/* FORM ELEMENTS */ 
+.form-group { 
+  margin-bottom: 14px; 
+  position: relative; 
+} 
+label { 
+  display: block; 
+  font-size: 0.85rem; 
+  font-weight: 600; 
+  margin-bottom: 6px; 
+  color: var(--text-main); 
+} 
+label span.req { 
+  color: var(--error-color); 
+} 
+/* WRAPPER INPUT DENGAN TOMBOL CLEAR "X" */ 
+.search-input-wrapper { 
+  position: relative; 
+  display: flex; 
+  align-items: center; 
+} 
+.search-input-wrapper input { 
+  padding-right: 32px; 
+} 
+.btn-clear-search { 
+  position: absolute; 
+  right: 10px; 
+  background: none; 
+  border: none; 
+  font-size: 1.1rem; 
+  color: #94a3b8; 
+  cursor: pointer; 
+  display: none; 
+  padding: 2px 6px; 
+  line-height: 1; 
+  border-radius: 50%; 
+} 
+.btn-clear-search:hover { 
+  color: #0f172a; 
+  background-color: #f1f5f9; 
+} 
+input { 
+  width: 100%; 
+  padding: 10px 12px; 
+  border: 1px solid var(--border-color); 
+  border-radius: var(--radius); 
+  font-size: 0.95rem; 
+  outline: none; 
+  transition: border-color 0.2s; 
+} 
+input:focus { 
+  border-color: var(--primary-color); 
+} 
+input[readonly] { 
+  background-color: #f1f5f9; 
+  color: #64748b; 
+  cursor: not-allowed; 
+} 
+.info-text { 
+  font-size: 0.75rem; 
+  margin-top: 4px; 
+  color: var(--text-muted); 
+} 
+/* AUTOCOMPLETE / DROPDOWN SUGGESTIONS */ 
+.suggestions-list { 
+  position: absolute; 
+  top: 100%; 
+  left: 0; 
+  right: 0; 
+  background: white; 
+  border: 1px solid var(--border-color); 
+  border-radius: 0 0 var(--radius) var(--radius); 
+  max-height: 200px; 
+  overflow-y: auto; 
+  z-index: 100; 
+  box-shadow: var(--shadow); 
+  display: none; 
+} 
+.suggestion-item { 
+  padding: 10px 12px; 
+  cursor: pointer; 
+  border-bottom: 1px solid #f1f5f9; 
+} 
+.suggestion-item:hover { 
+  background-color: #f8fafc; 
+} 
+.suggestion-item .item-code { 
+  font-weight: 600; 
+  font-size: 0.9rem; 
+} 
+.suggestion-item .item-desc { 
+  font-size: 0.8rem; 
+  color: var(--text-muted); 
+} 
+/* UPSERT TOGGLE */ 
+.upsert-toggle-wrapper { 
+  display: flex; 
+  align-items: center; 
+  gap: 10px; 
+  margin-top: 12px; 
+  padding: 10px 14px; 
+  background: #f1f5f9; 
+  border-radius: var(--radius); 
+  border: 1px solid var(--border-color); 
+} 
+.upsert-toggle-label { 
+  font-size: 0.875rem; 
+  font-weight: 600; 
+  color: var(--text-main); 
+  flex: 1; 
+} 
+.toggle-switch { 
+  position: relative; 
+  display: inline-block; 
+  width: 44px; 
+  height: 24px; 
+  flex-shrink: 0; 
+} 
+.toggle-switch input { 
+  opacity: 0; 
+  width: 0; 
+  height: 0; 
+} 
+.toggle-slider { 
+  position: absolute; 
+  cursor: pointer; 
+  top: 0; 
+  left: 0; 
+  right: 0; 
+  bottom: 0; 
+  background-color: #cbd5e1; 
+  border-radius: 24px; 
+  transition: 0.3s; 
+} 
+.toggle-slider:before { 
+  position: absolute; 
+  content: ""; 
+  height: 18px; 
+  width: 18px; 
+  left: 3px; 
+  bottom: 3px; 
+  background-color: white; 
+  border-radius: 50%; 
+  transition: 0.3s; 
+} 
+.toggle-switch input:checked + .toggle-slider { 
+  background-color: var(--primary-color); 
+} 
+.toggle-switch input:checked + .toggle-slider:before { 
+  transform: translateX(20px); 
+} 
+.upsert-status-on { 
+  font-size: 0.8rem; 
+  font-weight: 700; 
+  color: var(--primary-color); 
+  min-width: 28px; 
+} 
+.upsert-status-off { 
+  font-size: 0.8rem; 
+  font-weight: 700; 
+  color: var(--text-muted); 
+  min-width: 28px; 
+} 
+/* QR SCANNER CONTAINER */ 
+#scanner-modal { 
+  display: none; 
+  position: fixed; 
+  top: 0; 
+  left: 0; 
+  width: 100%; 
+  height: 100%; 
+  background: rgba(0, 0, 0, 0.8); 
+  z-index: 1000; 
+  justify-content: center; 
+  align-items: center; 
+  padding: 16px; 
+} 
+.scanner-box { 
+  background: white; 
+  width: 100%; 
+  max-width: 400px; 
+  border-radius: var(--radius); 
+  padding: 16px; 
+  text-align: center; 
+} 
+#reader { 
+  width: 100%; 
+  border-radius: var(--radius); 
+  overflow: hidden; 
+  margin-bottom: 12px; 
+} 
+/* ALERTS AND NOTIFICATIONS */ 
+.alert { 
+  padding: 12px; 
+  border-radius: var(--radius); 
+  font-size: 0.85rem; 
+  margin-bottom: 14px; 
+  display: none; 
+} 
+.alert-error { 
+  background-color: #fef2f2; 
+  color: var(--error-color); 
+  border: 1px solid #fecaca; 
+} 
+.alert-success { 
+  background-color: #f0fdf4; 
+  color: var(--success-color); 
+  border: 1px solid #bbf7d0; 
+} 
+.alert-warning { 
+  background-color: #fffbeb; 
+  color: var(--warning-color); 
+  border: 1px solid #fef3c7; 
+} 
+/* ACTIONS */ 
+.action-group { 
+  display: flex; 
+  gap: 8px; 
+  margin-top: 10px; 
+} 
+/* LOADING INDICATOR */ 
+.loading-overlay { 
+  display: none; 
+  position: absolute; 
+  top:0; 
+  left:0; 
+  right:0; 
+  bottom:0; 
+  background: rgba(255, 255, 255, 0.7); 
+  border-radius: var(--radius); 
+  justify-content: center; 
+  align-items: center; 
+  font-weight: 600; 
+  color: var(--primary-color); 
+  z-index: 50; 
+} 
+.relative { 
+  position: relative; 
+} 
+/* TABEL DATA HARI INI */ 
+.today-list-header { 
+  display: flex; 
+  justify-content: space-between; 
+  align-items: center; 
+  margin-bottom: 12px; 
+  border-bottom: 2px solid #e2e8f0; 
+  padding-bottom: 8px; 
+} 
+.today-list-header h2 { 
+  font-size: 1rem; 
+  color: var(--text-main); 
+  font-weight: 700; 
+} 
+.today-count { 
+  font-size: 0.8rem; 
+  background-color: #e2e8f0; 
+  padding: 2px 8px; 
+  border-radius: 12px; 
+  font-weight: 600; 
+} 
+.table-responsive { 
+  width: 100%; 
+  overflow-x: auto; 
+  border: 1px solid #e2e8f0; 
+  border-radius: var(--radius); 
+} 
+.data-table { 
+  width: 100%; 
+  border-collapse: collapse; 
+  font-size: 0.82rem; 
+  text-align: left; 
+} 
+.data-table th { 
+  background-color: #f1f5f9; 
+  color: var(--text-main); 
+  padding: 8px 10px; 
+  font-weight: 700; 
+  border-bottom: 1px solid #cbd5e1; 
+  white-space: nowrap; 
+} 
+.data-table td { 
+  padding: 8px 10px; 
+  border-bottom: 1px solid #e2e8f0; 
+  white-space: nowrap; 
+} 
+.data-table tbody tr:nth-child(even) { 
+  background-color: #f8fafc; 
+} 
+.data-table tbody tr:hover { 
+  background-color: #eff6ff; 
+} 
+.data-table tfoot td { 
+  background-color: #f1f5f9; 
+  font-weight: 700; 
+  border-top: 2px solid #cbd5e1; 
+} 
+.empty-today { 
+  text-align: center; 
+  font-size: 0.85rem; 
+  color: var(--text-muted); 
+  padding: 16px; 
+} 
+</style> 
+</head> 
+<body> 
+<div class="container"> 
+  <header> 
+    <div class="brand"> 
+      <h1>STOCK BATCH</h1> 
+      <p>Input & Edit Data Stok Firebase</p> 
+    </div> 
+    <div id="connectionStatus" class="status-badge status-offline"> 
+      <span class="dot dot-offline"></span> 
+      <span id="statusText">Checking...</span> 
+    </div> 
+  </header> 
+  <div id="mainFormCard" class="card relative"> 
+    <div id="loadingOverlay" class="loading-overlay"> 
+      <span id="loadingText">Memuat Data...</span> 
+    </div> 
+    <div id="editBanner" class="edit-banner"> 
+      <span>✏️ PERBAIKAN DATA (MODE EDIT)</span> 
+      <span style="font-size:0.75rem; font-weight:normal;">ID: <span id="editingRecordId">-</span></span> 
+    </div> 
+    <div id="alertBox" class="alert"></div> 
+    <button type="button" id="btnScanQR" class="btn btn-primary" style="margin-bottom: 16px;"> 
+      📷 SCAN QR 
+    </button> 
+    <form id="stockForm" autocomplete="off" onsubmit="return false;"> 
+      <div class="form-group"> 
+        <label for="itemCode">Item Code <span class="req">*</span></label> 
+        <div class="search-input-wrapper"> 
+          <input type="text" id="itemCode" placeholder="Ketik nomor/nama item..." required> 
+          <button type="button" id="btnClearItemCode" class="btn-clear-search" title="Reset Pencarian">✕</button> 
+        </div> 
+        <div id="itemSuggestions" class="suggestions-list"></div> 
+      </div> 
+      <div class="form-group"> 
+        <label for="itemName">Item Desc</label> 
+        <div class="search-input-wrapper"> 
+          <input type="text" id="itemName" placeholder="Ketik kata kunci (misal: java aged)..."> 
+          <button type="button" id="btnClearItemName" class="btn-clear-search" title="Reset Pencarian">✕</button> 
+        </div> 
+        <div id="itemNameSuggestions" class="suggestions-list"></div> 
+      </div> 
+      <div class="form-group"> 
+        <label for="batchInput">Batch <span class="req">*</span></label> 
+        <input type="text" id="batchInput" placeholder="Pilih/Ketik Batch..." required> 
+        <div id="batchSuggestions" class="suggestions-list"></div> 
+        <div id="batchInfo" class="info-text"></div> 
+      </div> 
+      <div class="form-group"> 
+        <label for="qtyInInput">Qty In</label> 
+        <input type="number" id="qtyInInput" step="any" min="0" placeholder="Masukkan qty in (opsional)"> 
+      </div> 
+      <div class="form-group"> 
+        <label for="qtyStokInput">Qty Stok</label> 
+        <input type="number" id="qtyStokInput" step="any" min="0" placeholder="Masukkan qty stok (opsional)"> 
+        <div id="lastStockInfo" class="info-text">💡 Stok terakhir: -</div> 
+      </div> 
+      <div class="form-group"> 
+        <label for="remarkInput">Remark</label> 
+        <input type="text" id="remarkInput" placeholder="Contoh: Palet 12 (opsional)"> 
+        <div id="remarkSuggestions" class="suggestions-list"></div> 
+      </div> 
+      <div class="form-group"> 
+        <label>Tanggal Transaksi</label> 
+        <input type="text" id="displayTanggal" readonly> 
+      </div> 
+      <div class="upsert-toggle-wrapper"> 
+        <span class="upsert-toggle-label">Mode Upsert</span> 
+        <label class="toggle-switch"> 
+          <input type="checkbox" id="upsertToggle"> 
+          <span class="toggle-slider"></span> 
+        </label> 
+        <span id="upsertToggleStatus" class="upsert-status-off">OFF</span> 
+      </div> 
+      <button type="button" id="btnSave" class="btn btn-primary" style="margin-top: 8px;"> 
+        SIMPAN DATA 
+      </button> 
+      <div class="action-group"> 
+        <button type="button" id="btnResetAll" class="btn btn-secondary"> 
+          INPUT ITEM BARU 
+        </button> 
+      </div> 
+    </form> 
+  </div> 
+  <div class="card"> 
+    <div class="today-list-header"> 
+      <h2>📊 Tabel Input Hari Ini</h2> 
+      <span id="todayCount" class="today-count">0 Item</span> 
+    </div> 
+    <div class="form-group" style="margin-bottom: 12px; position: relative;"> 
+      <input type="text" id="tableSearchInput" placeholder="🔍 Cari item name, item code, atau batch..." autocomplete="off"> 
+      <div id="tableSearchSuggestions" class="suggestions-list"></div> 
+    </div> 
+    <div class="table-responsive"> 
+      <table class="data-table"> 
+        <thead> 
+          <tr> 
+            <th>Jam</th> <th>Item Name</th> 
+            <th>Batch</th> 
+            <th>In</th> 
+            <th>Stok</th> <th>Item Code</th> 
+            <th>Remark</th> 
+            <th>Aksi</th> 
+          </tr> 
+        </thead> 
+        <tbody id="todayTableBody"> 
+          <tr> 
+            <td colspan="8" class="empty-today">Belum ada data diinput hari ini.</td> 
+          </tr> 
+        </tbody> 
+        <tfoot> 
+          <tr> 
+            <td colspan="3" style="text-align: right;">Total:</td> 
+            <td id="todayTotalIn" style="color: var(--success-color); font-weight:700;">0</td> 
+            <td id="todayTotalStok" style="color: var(--primary-color); font-weight:700;">0</td> 
+            <td colspan="3"></td> 
+          </tr> 
+        </tfoot> 
+      </table> 
+    </div> 
+  </div> 
+</div> 
+<div id="scanner-modal"> 
+  <div class="scanner-box"> 
+    <h3 style="margin-bottom: 12px;">Scan QR Item Code</h3> 
+    <div id="reader"></div> 
+    <button type="button" id="btnCloseScanner" class="btn btn-danger">TUTUP SCANNER</button> 
+  </div> 
+</div> 
+<script> 
+/* CONFIGURATION */ 
+const FIREBASE_DB_URL = "https://ambil-data-dd0d1-default-rtdb.asia-southeast1.firebasedatabase.app"; 
+const DATA_PATH = "data_stok"; 
+const ENDPOINT_URL = `${FIREBASE_DB_URL}/${DATA_PATH}.json`; 
+const LOCAL_STORAGE_REMARKS_KEY = "stock_app_saved_remarks"; 
+
+/* STATE MANAGEMENT */ 
+let stockData = []; // Cache lokal data Firebase 
+let html5QrCode = null; 
+let isSaving = false; 
+let selectedItemCode = ""; 
+let currentEditId = null; // ID firebase saat mode edit (null jika input baru) 
+
+/* INITIALIZATION */ 
+document.addEventListener("DOMContentLoaded", () => { 
+  initDateDisplay(); 
+  fetchFirebaseData(); 
+  setupEventListeners(); 
+}); 
+
+function initDateDisplay() { 
+  const today = new Date(); 
+  const day = String(today.getDate()).padStart(2, '0'); 
+  const month = String(today.getMonth() + 1).padStart(2, '0'); 
+  const year = today.getFullYear(); 
+  document.getElementById("displayTanggal").value = `${day}/${month}/${year}`; 
+} 
+
+function getTodayISOString() { 
+  const today = new Date(); 
+  const year = today.getFullYear(); 
+  const month = String(today.getMonth() + 1).padStart(2, '0'); 
+  const day = String(today.getDate()).padStart(2, '0'); 
+  return `${year}-${month}-${day}`; 
+} 
+
+/* FIREBASE API FUNCTIONS */ 
+async function fetchFirebaseData() { 
+  showLoading(true, "Memuat data Firebase..."); 
+  try { 
+    const response = await fetch(ENDPOINT_URL); 
+    if (!response.ok) throw new Error("Gagal terhubung ke database."); 
+    const data = await response.json(); 
+    stockData = []; 
+    if (data) { 
+      Object.keys(data).forEach(key => { 
+        stockData.push({ _id: key, ...data[key] }); 
+      }); 
+    } 
+    updateConnectionStatus(true); 
+    showAlert("", "hide"); 
+    renderTodayTable(); 
+    updateLastStockInfo(); 
+  } catch (error) { 
+    console.error("Firebase Error:", error); 
+    updateConnectionStatus(false); 
+    showAlert("⚠ Firebase tidak dapat diakses atau koneksi terputus.", "error"); 
+  } finally { 
+    showLoading(false); 
+  } 
+} 
+
+// Simpan Data Baru (POST) 
+async function saveStockToFirebase(payload) { 
+  const response = await fetch(ENDPOINT_URL, { 
+    method: "POST", 
+    headers: { "Content-Type": "application/json" }, 
+    body: JSON.stringify(payload) 
+  }); 
+  if (!response.ok) throw new Error("Gagal mengirim data ke Firebase."); 
+  return await response.json(); 
+} 
+
+// FITUR EDIT: Update Data Lama (PATCH) - Tidak membuat record baru 
+async function updateStockInFirebase(recordId, payload) { 
+  const updateUrl = `${FIREBASE_DB_URL}/${DATA_PATH}/${recordId}.json`; 
+  const response = await fetch(updateUrl, { 
+    method: "PATCH", 
+    headers: { "Content-Type": "application/json" }, 
+    body: JSON.stringify(payload) 
+  }); 
+  if (!response.ok) throw new Error("Gagal memperbarui data di Firebase."); 
+  return await response.json(); 
+} 
+
+/* STATUS INDIKATOR */ 
+function updateConnectionStatus(isOnline) { 
+  const statusBadge = document.getElementById("connectionStatus"); 
+  const statusText = document.getElementById("statusText"); 
+  const dot = statusBadge.querySelector(".dot"); 
+  if (isOnline) { 
+    statusBadge.className = "status-badge status-online"; 
+    dot.className = "dot dot-online"; 
+    statusText.innerText = "Online"; 
+  } else { 
+    statusBadge.className = "status-badge status-offline"; 
+    dot.className = "dot dot-offline"; 
+    statusText.innerText = "Offline"; 
+  } 
+} 
+
+/* EVENT LISTENERS SETUP */ 
+function setupEventListeners() { 
+  const itemCodeInput = document.getElementById("itemCode"); 
+  itemCodeInput.addEventListener("input", (e) => { 
+    handleSearchInput(e); 
+    toggleClearButton("itemCode", "btnClearItemCode"); 
+  }); 
+  itemCodeInput.addEventListener("focus", handleSearchInput); 
+
+  const itemNameInput = document.getElementById("itemName"); 
+  itemNameInput.addEventListener("input", (e) => { 
+    handleSearchInput(e); 
+    toggleClearButton("itemName", "btnClearItemName"); 
+  }); 
+  itemNameInput.addEventListener("focus", handleSearchInput); 
+
+  // Listener Tombol Reset Pencarian "X" 
+  document.getElementById("btnClearItemCode").addEventListener("click", () => { 
+    clearSearchInput("itemCode", "itemSuggestions", "btnClearItemCode"); 
+  }); 
+  document.getElementById("btnClearItemName").addEventListener("click", () => { 
+    clearSearchInput("itemName", "itemNameSuggestions", "btnClearItemName"); 
+  }); 
+
+  const batchInput = document.getElementById("batchInput"); 
+  batchInput.addEventListener("focus", showBatchSuggestions); 
+  batchInput.addEventListener("input", checkCustomBatchInput); 
+
+  const remarkInput = document.getElementById("remarkInput"); 
+  remarkInput.addEventListener("focus", handleRemarkInput); 
+  remarkInput.addEventListener("input", handleRemarkInput); 
+
+  document.addEventListener("click", (e) => { 
+    if (!e.target.closest("#itemCode") && !e.target.closest("#itemSuggestions") && !e.target.closest("#btnClearItemCode")) { 
+      hideElement("itemSuggestions"); 
+    } 
+    if (!e.target.closest("#itemName") && !e.target.closest("#itemNameSuggestions") && !e.target.closest("#btnClearItemName")) { 
+      hideElement("itemNameSuggestions"); 
+    } 
+    if (!e.target.closest("#batchInput") && !e.target.closest("#batchSuggestions")) { 
+      hideElement("batchSuggestions"); 
+    } 
+    if (!e.target.closest("#remarkInput") && !e.target.closest("#remarkSuggestions")) { 
+      hideElement("remarkSuggestions"); 
+    } 
+  }); 
+
+  // UPSERT TOGGLE — init dari localStorage 
+  const upsertToggle = document.getElementById("upsertToggle"); 
+  const upsertStatus = document.getElementById("upsertToggleStatus"); 
+
+  function applyUpsertToggleUI(isOn) { 
+    upsertStatus.textContent = isOn ? "ON" : "OFF"; 
+    upsertStatus.className = isOn ? "upsert-status-on" : "upsert-status-off"; 
+  } 
+
+  const savedUpsert = localStorage.getItem("upsertMode"); 
+  const initUpsert = savedUpsert === null ? false : savedUpsert === "true"; 
+  upsertToggle.checked = initUpsert; 
+  applyUpsertToggleUI(initUpsert); 
+
+  upsertToggle.addEventListener("change", () => { 
+    const isOn = upsertToggle.checked; 
+    localStorage.setItem("upsertMode", isOn); 
+    applyUpsertToggleUI(isOn); 
+  }); 
+
+  document.getElementById("btnScanQR").addEventListener("click", startQRScanner); 
+  document.getElementById("btnCloseScanner").addEventListener("click", stopQRScanner); 
+  document.getElementById("btnSave").addEventListener("click", handleSave); 
+  document.getElementById("btnResetAll").addEventListener("click", resetFullForm); 
+
+  // Search tabel hari ini 
+  const tableSearch = document.getElementById("tableSearchInput"); 
+  if (tableSearch) { 
+    tableSearch.addEventListener("input", () => renderTodayTable()); 
+    tableSearch.addEventListener("focus", () => renderTodayTable()); 
+  } 
+
+  document.addEventListener("click", (e) => { 
+    if (!e.target.closest("#tableSearchInput") && !e.target.closest("#tableSearchSuggestions")) { 
+      const s = document.getElementById("tableSearchSuggestions"); 
+      if (s) s.style.display = "none"; 
+    } 
+  }); 
+} 
+
+/* LOGIKA RESET PENCARIAN ITEM */ 
+function clearSearchInput(inputId, suggestionId, clearBtnId) { 
+  const inputElem = document.getElementById(inputId); 
+  inputElem.value = ""; 
+  hideElement(suggestionId); 
+  hideElement(clearBtnId); 
+
+  if (inputId === "itemCode") { 
+    document.getElementById("itemName").value = ""; 
+    hideElement("btnClearItemName"); 
+    selectedItemCode = ""; 
+    updateLastStockInfo(); 
+  } 
+  inputElem.focus(); 
+} 
+
+function toggleClearButton(inputId, clearBtnId) { 
+  const val = document.getElementById(inputId).value.trim(); 
+  if (val.length > 0) { 
+    showElement(clearBtnId); 
+  } else { 
+    hideElement(clearBtnId); 
+  } 
+} 
+
+/* SMART SEARCH MULTI-KEYWORD LOGIC */ 
+function handleSearchInput(e) { 
+  const targetId = e.target.id; 
+  const query = e.target.value.trim().toLowerCase(); 
+  const suggestionsContainer = document.getElementById(targetId === "itemCode" ? "itemSuggestions" : "itemNameSuggestions"); 
+
+  if (!query) { 
+    suggestionsContainer.innerHTML = ""; 
+    hideElement(suggestionsContainer.id); 
+    return; 
+  } 
+
+  const tokens = query.split(/\s+/).filter(t => t.length > 0); 
+  const uniqueItemsMap = new Map(); 
+
+  stockData.forEach(item => { 
+    const codeStr = String(item.itemnumber || "").toLowerCase(); 
+    const descStr = String(item.itemname || "").toLowerCase(); 
+    const combinedStr = `${codeStr} ${descStr}`; 
+    const isMatch = tokens.every(token => combinedStr.includes(token)); 
+
+    if (isMatch) { 
+      if (!uniqueItemsMap.has(item.itemnumber)) { 
+        uniqueItemsMap.set(item.itemnumber, item.itemname || "-"); 
+      } 
+    } 
+  }); 
+
+  const suggestions = Array.from(uniqueItemsMap.entries()).slice(0, 10); 
+
+  if (suggestions.length === 0) { 
+    suggestionsContainer.innerHTML = `<div class="suggestion-item"><em>Data tidak ditemukan</em></div>`; 
+    showElement(suggestionsContainer.id); 
+    return; 
+  } 
+
+  suggestionsContainer.innerHTML = suggestions.map(([code, name]) => ` 
+    <div class="suggestion-item" onclick="selectItem('${escapeHtml(code)}')"> 
+      <div class="item-code">${escapeHtml(code)}</div> 
+      <div class="item-desc">${escapeHtml(name)}</div> 
+    </div> 
+  `).join(""); 
+
+  showElement(suggestionsContainer.id); 
+} 
+
+function selectItem(itemCode) { 
+  document.getElementById("itemCode").value = itemCode; 
+  toggleClearButton("itemCode", "btnClearItemCode"); 
+  hideElement("itemSuggestions"); 
+  hideElement("itemNameSuggestions"); 
+  processSelectedItem(itemCode); 
+} 
+
+function processSelectedItem(itemCode) { 
+  selectedItemCode = itemCode; 
+  const itemRecords = stockData.filter(d => d.itemnumber === itemCode); 
+
+  if (itemRecords.length === 0) { 
+    showAlert(`⚠ ITEM TIDAK DITEMUKAN<br><br>Item Code: <b>${escapeHtml(itemCode)}</b><br>Data item tidak ditemukan di Firebase. Silakan periksa QR atau Item Code.`, "error"); 
+    document.getElementById("itemName").value = ""; 
+    hideElement("btnClearItemName"); 
+    document.getElementById("batchInput").value = ""; 
+    document.getElementById("batchInfo").innerText = ""; 
+    setFormInputsEnabled(false); 
+    updateLastStockInfo(); 
+    return; 
+  } 
+
+  const itemName = itemRecords[0].itemname || "-"; 
+  document.getElementById("itemName").value = itemName; 
+  toggleClearButton("itemName", "btnClearItemName"); 
+  showAlert("", "hide"); 
+  setFormInputsEnabled(true); 
+
+  if (!currentEditId) { 
+    processBatchSelection(itemRecords); 
+  } 
+} 
+
+/* REMARK LOCALSTORAGE FUNCTIONS */ 
+function getSavedRemarks() { 
+  try { 
+    const saved = localStorage.getItem(LOCAL_STORAGE_REMARKS_KEY); 
+    return saved ? JSON.parse(saved) : []; 
+  } catch (e) { 
+    return []; 
+  } 
+} 
+
+function saveRemarkToLocalStorage(remarkText) { 
+  if (!remarkText) return; 
+  let remarks = getSavedRemarks(); 
+  remarks = remarks.filter(r => r.toLowerCase() !== remarkText.toLowerCase()); 
+  remarks.unshift(remarkText); 
+  if (remarks.length > 20) remarks = remarks.slice(0, 20); 
+  try { 
+    localStorage.setItem(LOCAL_STORAGE_REMARKS_KEY, JSON.stringify(remarks)); 
+  } catch (e) {} 
+} 
+
+function handleRemarkInput(e) { 
+  const query = e.target.value.trim().toLowerCase(); 
+  const suggestionsContainer = document.getElementById("remarkSuggestions"); 
+  const savedRemarks = getSavedRemarks(); 
+
+  if (savedRemarks.length === 0) { 
+    hideElement("remarkSuggestions"); 
+    return; 
+  } 
+
+  const filtered = savedRemarks.filter(r => r.toLowerCase().includes(query)); 
+
+  if (filtered.length === 0) { 
+    hideElement("remarkSuggestions"); 
+    return; 
+  } 
+
+  suggestionsContainer.innerHTML = filtered.map(r => ` 
+    <div class="suggestion-item" onclick="selectRemark('${escapeHtml(r)}')"> 
+      <div class="item-code">${escapeHtml(r)}</div> 
+    </div> 
+  `).join(""); 
+
+  showElement("remarkSuggestions"); 
+} 
+
+function selectRemark(val) { 
+  document.getElementById("remarkInput").value = val; 
+  hideElement("remarkSuggestions"); 
+} 
+
+/* BATCH SELECTION LOGIC */ 
+function processBatchSelection(itemRecords) { 
+  const today = new Date(); 
+  today.setHours(23, 59, 59, 999); 
+
+  const thirtyDaysAgo = new Date(today); 
+  thirtyDaysAgo.setDate(today.getDate() - 30); 
+  thirtyDaysAgo.setHours(0, 0, 0, 0); 
+
+  function parseRecordDate(dateStr) { 
+    if (!dateStr) return null; 
+    const parts = String(dateStr).trim().split('-'); 
+    if (parts.length === 3) { 
+      return new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10)); 
+    } 
+    return null; 
+  } 
+
+  const recentRecords = itemRecords.filter(r => { 
+    if (!r.batch) return false; 
+    const recDate = parseRecordDate(r.tanggal); 
+    return recDate && recDate >= thirtyDaysAgo && recDate <= today; 
+  }); 
+
+  const recordsToProcess = recentRecords.length > 0 ? recentRecords : itemRecords.filter(r => r.batch); 
+
+  if (recordsToProcess.length === 0) { 
+    document.getElementById("batchInput").value = ""; 
+    document.getElementById("batchInfo").innerText = "Tidak ada data batch. Silakan isi batch secara manual."; 
+    document.getElementById("batchInfo").style.color = "var(--warning-color)"; 
+    window.currentSortedBatches = []; 
+    updateLastStockInfo(); 
+    return; 
+  } 
+
+  const batchMap = new Map(); 
+  recordsToProcess.forEach(r => { 
+    const b = String(r.batch).trim(); 
+    if (!b) return; 
+    const recordDateStr = String(r.tanggal || ""); 
+    const uploadedAt = String(r.uploaded_at || ""); 
+
+    if (!batchMap.has(b)) { 
+      batchMap.set(b, { tanggal: recordDateStr, uploaded_at: uploadedAt, record: r }); 
+    } else { 
+      const existing = batchMap.get(b); 
+      if (recordDateStr > existing.tanggal) { 
+        batchMap.set(b, { tanggal: recordDateStr, uploaded_at: uploadedAt, record: r }); 
+      } else if (recordDateStr === existing.tanggal && uploadedAt > existing.uploaded_at) { 
+        batchMap.set(b, { tanggal: recordDateStr, uploaded_at: uploadedAt, record: r }); 
+      } 
+    } 
+  }); 
+
+  const sortedBatches = Array.from(batchMap.entries()).sort((a, b) => { 
+    if (b[1].tanggal !== a[1].tanggal) return b[1].tanggal.localeCompare(a[1].tanggal); 
+    return b[1].uploaded_at.localeCompare(a[1].uploaded_at); 
+  }); 
+
+  const defaultBatch = sortedBatches[0][0]; 
+  const latestInfo = sortedBatches[0][1].record; 
+
+  document.getElementById("batchInput").value = defaultBatch; 
+  window.currentSortedBatches = sortedBatches.map(item => item[0]); 
+
+  if (recentRecords.length > 0) { 
+    document.getElementById("batchInfo").innerText = `Batch ditemukan (Terakhir: ${formatDisplayDate(latestInfo.tanggal)}, Stok: ${latestInfo.stok})`; 
+    document.getElementById("batchInfo").style.color = "var(--text-muted)"; 
+  } else { 
+    document.getElementById("batchInfo").innerText = `Batch terakhir historical: ${defaultBatch}`; 
+    document.getElementById("batchInfo").style.color = "var(--warning-color)"; 
+  } 
+
+  updateLastStockInfo(); 
+} 
+
+function showBatchSuggestions() { 
+  if (!window.currentSortedBatches || window.currentSortedBatches.length === 0) return; 
+  const container = document.getElementById("batchSuggestions"); 
+  container.innerHTML = window.currentSortedBatches.map(b => ` 
+    <div class="suggestion-item" onclick="selectBatch('${escapeHtml(b)}')"> 
+      <div class="item-code">${escapeHtml(b)}</div> 
+    </div> 
+  `).join(""); 
+  showElement("batchSuggestions"); 
+} 
+
+function selectBatch(batchValue) { 
+  document.getElementById("batchInput").value = batchValue; 
+  hideElement("batchSuggestions"); 
+  checkCustomBatchInput(); 
+} 
+
+function checkCustomBatchInput() { 
+  const currentVal = document.getElementById("batchInput").value.trim(); 
+  const batchInfo = document.getElementById("batchInfo"); 
+
+  if (window.currentSortedBatches && window.currentSortedBatches.includes(currentVal)) { 
+    batchInfo.innerText = "Batch ditemukan dari data 30 hari terakhir."; 
+    batchInfo.style.color = "var(--text-muted)"; 
+  } else if (currentVal !== "") { 
+    batchInfo.innerText = "Batch baru / tidak ditemukan dalam 30 hari terakhir."; 
+    batchInfo.style.color = "var(--warning-color)"; 
+  } else { 
+    batchInfo.innerText = ""; 
+  } 
+  updateLastStockInfo(); 
+} 
+
+/* INFORMASI STOK TERAKHIR */ 
+function updateLastStockInfo() { 
+  const itemCode = document.getElementById("itemCode").value.trim(); 
+  const batch = document.getElementById("batchInput").value.trim(); 
+  const infoElem = document.getElementById("lastStockInfo"); 
+
+  if (!itemCode || !batch) { 
+    infoElem.innerText = "💡 Stok terakhir: -"; 
+    return; 
+  } 
+
+  const matchedRecords = stockData.filter(d => 
+    String(d.itemnumber || "").trim() === itemCode && 
+    String(d.batch || "").trim() === batch && 
+    d._id !== currentEditId 
+  ); 
+
+  if (matchedRecords.length === 0) { 
+    infoElem.innerText = "💡 Stok terakhir: Belum ada"; 
+    return; 
+  } 
+
+  matchedRecords.sort((a, b) => { 
+    const dateA = String(a.tanggal || ""); 
+    const dateB = String(b.tanggal || ""); 
+    if (dateB !== dateA) return dateB.localeCompare(dateA); 
+    return String(b.uploaded_at || "").localeCompare(String(a.uploaded_at || "")); 
+  }); 
+
+  const latestRecord = matchedRecords[0]; 
+  const lastIn = latestRecord.in !== undefined && latestRecord.in !== null ? latestRecord.in : '-'; 
+  const lastStok = latestRecord.stok !== undefined && latestRecord.stok !== null ? latestRecord.stok : '-'; 
+
+  infoElem.innerText = `💡 In terakhir: ${lastIn} | Stok terakhir: ${lastStok}`; 
+} 
+
+/* QR SCANNER INTEGRATION */ 
+function startQRScanner() { 
+  showElement("scanner-modal"); 
+  if (!html5QrCode) { 
+    html5QrCode = new Html5Qrcode("reader"); 
+  } 
+  const config = { fps: 10, qrbox: { width: 250, height: 250 } }; 
+  html5QrCode.start( 
+    { facingMode: "environment" }, 
+    config, 
+    onScanSuccess, 
+    onScanFailure 
+  ).catch(err => { 
+    console.error("Camera access error:", err); 
+    stopQRScanner(); 
+    showAlert("⚠ Kamera tidak dapat diakses atau izin ditolak.", "error"); 
+  }); 
+} 
+
+function onScanSuccess(decodedText) { 
+  const itemCode = decodedText.trim(); 
+  stopQRScanner(); 
+  document.getElementById("itemCode").value = itemCode; 
+  toggleClearButton("itemCode", "btnClearItemCode"); 
+  processSelectedItem(itemCode); 
+  setTimeout(() => { 
+    document.getElementById("qtyInput").focus(); 
+  }, 300); 
+} 
+
+function onScanFailure(error) {} 
+
+function stopQRScanner() { 
+  if (html5QrCode && html5QrCode.isScanning) { 
+    html5QrCode.stop().then(() => { 
+      hideElement("scanner-modal"); 
+    }).catch(err => { 
+      hideElement("scanner-modal"); 
+    }); 
+  } else { 
+    hideElement("scanner-modal"); 
+  } 
+} 
+
+/* FUNGSI MUAT DATA KE FORM UNTUK EDIT */ 
+function startEditRecord(recordId) { 
+  const target = stockData.find(d => d._id === recordId); 
+  if (!target) { 
+    showAlert("⚠ Data tidak ditemukan di memori.", "error"); 
+    return; 
+  } 
+
+  currentEditId = recordId; 
+
+  // Isi nilai form dari record yang akan di-edit 
+  document.getElementById("itemCode").value = target.itemnumber || ""; 
+  toggleClearButton("itemCode", "btnClearItemCode"); 
+  document.getElementById("itemName").value = target.itemname || ""; 
+  toggleClearButton("itemName", "btnClearItemName"); 
+  document.getElementById("batchInput").value = target.batch || ""; 
+  document.getElementById("qtyInInput").value = target.in !== undefined && target.in !== null ? target.in : ""; 
+  document.getElementById("qtyStokInput").value = target.stok !== undefined && target.stok !== null ? target.stok : ""; 
+  document.getElementById("remarkInput").value = target.remark || ""; 
+
+  if (target.tanggal) { 
+    const parts = target.tanggal.split("-"); 
+    if (parts.length === 3) { 
+      document.getElementById("displayTanggal").value = `${parts[2]}/${parts[1]}/${parts[0]}`; 
+    } 
+  } 
+
+  // Ubah Tampilan UI ke Mode Edit 
+  document.getElementById("mainFormCard").classList.add("edit-mode"); 
+  document.getElementById("editBanner").style.display = "flex"; 
+  document.getElementById("editingRecordId").innerText = recordId; 
+
+  const btnSave = document.getElementById("btnSave"); 
+  btnSave.innerText = "UPDATE DATA"; 
+  btnSave.className = "btn btn-warning"; 
+
+  setFormInputsEnabled(true); 
+  updateLastStockInfo(); 
+  showAlert(`✏️ Anda sedang mengubah data untuk <b>${escapeHtml(target.itemnumber)}</b>. Klik "UPDATE DATA" untuk menyimpan perubahan.`, "warning"); 
+  window.scrollTo({ top: 0, behavior: 'smooth' }); 
+} 
+
+/* LOGIKA SIMPAN / UPDATE DENGAN PATCH */ 
+async function handleSave() { 
+  if (isSaving) return; 
+
+  const itemCode = document.getElementById("itemCode").value.trim(); 
+  const itemName = document.getElementById("itemName").value.trim(); 
+  const batch = document.getElementById("batchInput").value.trim(); 
+  const qtyInStr = document.getElementById("qtyInInput").value; 
+  const qtyStokStr = document.getElementById("qtyStokInput").value; 
+  const qtyIn = qtyInStr !== "" ? parseFloat(qtyInStr) : null; 
+  const qtyStok = qtyStokStr !== "" ? parseFloat(qtyStokStr) : null; 
+  const remark = document.getElementById("remarkInput").value.trim(); 
+
+  if (!itemCode) { 
+    showAlert("⚠ Item Code belum diisi.", "error"); 
+    return; 
+  } 
+  if (!itemName) { 
+    showAlert("⚠ Data Item Desc kosong. Pastikan Item Code valid.", "error"); 
+    return; 
+  } 
+  if (!batch) { 
+    showAlert("⚠ Batch tidak boleh kosong.", "error"); 
+    return; 
+  } 
+  if (qtyIn === null && qtyStok === null) { 
+    showAlert("⚠ Minimal salah satu Qty In atau Qty Stok harus diisi.", "error"); 
+    return; 
+  } 
+  if (qtyIn !== null && (isNaN(qtyIn) || qtyIn < 0)) { 
+    showAlert("⚠ Qty In harus berupa angka dan tidak boleh negatif.", "error"); 
+    return; 
+  } 
+  if (qtyStok !== null && (isNaN(qtyStok) || qtyStok < 0)) { 
+    showAlert("⚠ Qty Stok harus berupa angka dan tidak boleh negatif.", "error"); 
+    return; 
+  } 
+
+  isSaving = true; 
+  document.getElementById("btnSave").disabled = true; 
+
+  try { 
+    if (currentEditId) { 
+      // MODE EDIT (PATCH OVERWRITE) 
+      showLoading(true, "Memperbarui data di Firebase..."); 
+      const payloadUpdate = { 
+        batch: batch, 
+        itemname: itemName, 
+        itemnumber: itemCode, 
+        remark: remark || "", 
+        updated_at: new Date().toISOString() 
+      }; 
+
+      if (qtyIn !== null) payloadUpdate.in = qtyIn; 
+      if (qtyStok !== null) payloadUpdate.stok = qtyStok; 
+
+      await updateStockInFirebase(currentEditId, payloadUpdate); 
+
+      const index = stockData.findIndex(d => d._id === currentEditId); 
+      if (index !== -1) { 
+        stockData[index] = { ...stockData[index], ...payloadUpdate }; 
+      } 
+
+      showAlert(`✓ DATA BERHASIL DIPERBARUI<br><br>Item: <b>${escapeHtml(itemCode)}</b><br>Batch: <b>${escapeHtml(batch)}</b>${qtyIn !== null ? `<br>Qty In: <b>${qtyIn}</b>` : ''}${qtyStok !== null ? `<br>Qty Stok: <b>${qtyStok}</b>` : ''}`, "success"); 
+      resetFullForm(); 
+
+    } else { 
+      // MODE INPUT BARU (POST) 
+      const upsertModeOn = document.getElementById("upsertToggle").checked; 
+      const todayISO = getTodayISOString(); 
+      const existing = upsertModeOn ? stockData.find(d => 
+        String(d.itemnumber).trim() === itemCode && 
+        String(d.batch).trim() === batch && 
+        String(d.tanggal).trim() === todayISO 
+      ) : null; 
+
+      if (upsertModeOn) { 
+        showLoading(true, "Memeriksa data duplikat..."); 
+      } else { 
+        showLoading(true, "Menyimpan data baru..."); 
+      } 
+
+      if (existing) { 
+        // UPSERT: akumulasi field yang diisi saja 
+        showLoading(true, "Menambah qty ke record yang sudah ada..."); 
+        const payloadUpdate = { 
+          updated_at: new Date().toISOString() 
+        }; 
+
+        let alertDetail = ""; 
+        if (qtyIn !== null) { 
+          const inLama = parseFloat(existing.in) || 0; 
+          const inBaru = inLama + qtyIn; 
+          payloadUpdate.in = inBaru; 
+          alertDetail += `<br>Qty In: <b>${inLama}</b> + <b>${qtyIn}</b> = <b>${inBaru}</b>`; 
+        } 
+        if (qtyStok !== null) { 
+          const stokLama = parseFloat(existing.stok) || 0; 
+          const stokBaru = stokLama + qtyStok; 
+          payloadUpdate.stok = stokBaru; 
+          alertDetail += `<br>Qty Stok: <b>${stokLama}</b> + <b>${qtyStok}</b> = <b>${stokBaru}</b>`; 
+        } 
+
+        await updateStockInFirebase(existing._id, payloadUpdate); 
+
+        const index = stockData.findIndex(d => d._id === existing._id); 
+        if (index !== -1) { 
+          stockData[index] = { ...stockData[index], ...payloadUpdate }; 
+        } 
+
+        showAlert( 
+          `✓ QTY BERHASIL DITAMBAHKAN<br><br>Item: <b>${escapeHtml(itemCode)}</b><br>Batch: <b>${escapeHtml(batch)}</b>${alertDetail}`, 
+          "success" 
+        ); 
+
+        document.getElementById("qtyInInput").value = ""; 
+        document.getElementById("qtyStokInput").value = ""; 
+        document.getElementById("remarkInput").value = ""; 
+
+        const itemRecordsU = stockData.filter(d => d.itemnumber === itemCode); 
+        processBatchSelection(itemRecordsU); 
+
+      } else { 
+        // INSERT BARU: belum ada record dengan kombinasi ini 
+        showLoading(true, "Menyimpan data baru..."); 
+        const payloadNew = { 
+          batch: batch, 
+          itemname: itemName, 
+          itemnumber: itemCode, 
+          remark: remark || "", 
+          tanggal: todayISO, 
+          uploaded_at: new Date().toISOString() 
+        }; 
+
+        if (qtyIn !== null) payloadNew.in = qtyIn; 
+        if (qtyStok !== null) payloadNew.stok = qtyStok; 
+
+        const response = await saveStockToFirebase(payloadNew); 
+        if (remark) saveRemarkToLocalStorage(remark); 
+
+        stockData.push({ _id: response.name, ...payloadNew }); 
+
+        showAlert(`✓ DATA BERHASIL DISIMPAN<br><br>Item: <b>${escapeHtml(itemCode)}</b><br>Batch: <b>${escapeHtml(batch)}</b>${qtyIn !== null ? `<br>Qty In: <b>${qtyIn}</b>` : ''}${qtyStok !== null ? `<br>Qty Stok: <b>${qtyStok}</b>` : ''}`, "success"); 
+
+        document.getElementById("qtyInInput").value = ""; 
+        document.getElementById("qtyStokInput").value = ""; 
+        document.getElementById("remarkInput").value = ""; 
+
+        const itemRecordsN = stockData.filter(d => d.itemnumber === itemCode); 
+        processBatchSelection(itemRecordsN); 
+      } 
+    } 
+
+    if (remark) saveRemarkToLocalStorage(remark); 
+    renderTodayTable(); 
+
+  } catch (error) { 
+    console.error("Save/Update Error:", error); 
+    showAlert("⚠ Gagal menyimpan/memperbarui data ke Firebase. Periksa koneksi internet.", "error"); 
+  } finally { 
+    isSaving = false; 
+    document.getElementById("btnSave").disabled = false; 
+    showLoading(false); 
+  } 
+} 
+
+/* RENDER TABEL DAFTAR INPUT HARI INI */ 
+function renderTodayTable() { 
+  const todayISO = getTodayISOString(); 
+  const tbody = document.getElementById("todayTableBody"); 
+  const searchQuery = document.getElementById("tableSearchInput") ? document.getElementById("tableSearchInput").value.trim().toLowerCase() : ""; 
+
+  let todayData = stockData.filter(item => String(item.tanggal) === todayISO); 
+  todayData.sort((a, b) => String(b.uploaded_at || "").localeCompare(String(a.uploaded_at || ""))); 
+
+  // Filter berdasarkan search 
+  const filteredData = searchQuery ? todayData.filter(item => { 
+    const combined = `${item.itemnumber || ""} ${item.itemname || ""} ${item.batch || ""}`.toLowerCase(); 
+    return combined.includes(searchQuery); 
+  }) : todayData; 
+
+  document.getElementById("todayCount").innerText = `${filteredData.length}${searchQuery ? `/${todayData.length}` : ""} Item`; 
+
+  const totalIn = filteredData.reduce((sum, item) => sum + (parseFloat(item.in) || 0), 0); 
+  const totalStok = filteredData.reduce((sum, item) => sum + (parseFloat(item.stok) || 0), 0); 
+
+  document.getElementById("todayTotalIn").innerText = totalIn.toLocaleString("id-ID"); 
+  document.getElementById("todayTotalStok").innerText = totalStok.toLocaleString("id-ID"); 
+
+  if (filteredData.length === 0) { 
+    const msg = searchQuery ? "Tidak ada data yang cocok dengan pencarian." : "Belum ada data diinput hari ini."; 
+    tbody.innerHTML = `<tr><td colspan="8" class="empty-today">${msg}</td></tr>`; 
+    return; 
+  } 
+
+  tbody.innerHTML = filteredData.map(item => { 
+    const timeStr = item.uploaded_at ? new Date(item.uploaded_at).toLocaleTimeString("id-ID", { hour: '2-digit', minute: '2-digit' }) : '-'; 
+    const inVal = item.in !== undefined && item.in !== null ? item.in : '-'; 
+    const stokVal = item.stok !== undefined && item.stok !== null ? item.stok : '-'; 
+
+    return ` 
+      <tr> 
+        <td>${timeStr}</td> 
+        <td><b>${escapeHtml(item.itemname)}</b></td> 
+        <td>${escapeHtml(item.batch)}</td> 
+        <td style="color: var(--success-color); font-weight:700;">${inVal}</td> 
+        <td style="color: var(--primary-color); font-weight:700;">${stokVal}</td> 
+        <td><b>${escapeHtml(item.itemnumber)}</b></td> 
+        <td>${escapeHtml(item.remark || '-')}</td> 
+        <td> 
+          <button type="button" class="btn-action-edit" onclick="startEditRecord('${item._id}')">✏️ Edit</button> 
+        </td> 
+      </tr> 
+    `; 
+  }).join(""); 
+
+  // Update autocomplete suggestions dari data hari ini 
+  updateTableSearchSuggestions(todayData, searchQuery); 
+} 
+
+/* AUTOCOMPLETE SEARCH TABEL */ 
+function updateTableSearchSuggestions(todayData, query) { 
+  const container = document.getElementById("tableSearchSuggestions"); 
+  if (!query || !container) { 
+    if (container) container.style.display = "none"; 
+    return; 
+  } 
+
+  const seen = new Set(); 
+  const suggestions = []; 
+
+  todayData.forEach(item => { 
+    const combined = `${item.itemnumber || ""} ${item.itemname || ""} ${item.batch || ""}`.toLowerCase(); 
+    if (!combined.includes(query)) return; 
+
+    // Suggest itemnumber 
+    const key1 = `code:${item.itemnumber}`; 
+    if (!seen.has(key1)) { 
+      seen.add(key1); 
+      suggestions.push({ label: item.itemnumber, sub: item.itemname, value: item.itemnumber }); 
+    } 
+
+    // Suggest batch 
+    const key2 = `batch:${item.batch}`; 
+    if (!seen.has(key2)) { 
+      seen.add(key2); 
+      suggestions.push({ label: item.batch, sub: `Batch — ${item.itemnumber}`, value: item.batch }); 
+    } 
+  }); 
+
+  if (suggestions.length === 0) { 
+    container.style.display = "none"; 
+    return; 
+  } 
+
+  container.innerHTML = suggestions.slice(0, 8).map(s => ` 
+    <div class="suggestion-item" onclick="selectTableSearch('${escapeHtml(s.value)}')"> 
+      <div class="item-code">${escapeHtml(s.label)}</div> 
+      <div class="item-desc">${escapeHtml(s.sub)}</div> 
+    </div> 
+  `).join(""); 
+
+  container.style.display = "block"; 
+} 
+
+function selectTableSearch(value) { 
+  document.getElementById("tableSearchInput").value = value; 
+  document.getElementById("tableSearchSuggestions").style.display = "none"; 
+  renderTodayTable(); 
+} 
+
+/* FORM RESET & KELUAR DARI MODE EDIT */ 
+function resetFullForm() { 
+  currentEditId = null; 
+  document.getElementById("stockForm").reset(); 
+  document.getElementById("itemName").value = ""; 
+  document.getElementById("batchInfo").innerText = ""; 
+  hideElement("btnClearItemCode"); 
+  hideElement("btnClearItemName"); 
+
+  // UI Reset 
+  document.getElementById("mainFormCard").classList.remove("edit-mode"); 
+  document.getElementById("editBanner").style.display = "none"; 
+  document.getElementById("editingRecordId").innerText = "-"; 
+
+  const btnSave = document.getElementById("btnSave"); 
+  btnSave.innerText = "SIMPAN DATA"; 
+  btnSave.className = "btn btn-primary"; 
+
+  initDateDisplay(); 
+  selectedItemCode = ""; 
+  window.currentSortedBatches = []; 
+  setFormInputsEnabled(true); 
+  showAlert("", "hide"); 
+  updateLastStockInfo(); 
+  document.getElementById("itemCode").focus(); 
+} 
+
+function setFormInputsEnabled(enabled) { 
+  document.getElementById("batchInput").disabled = !enabled; 
+  document.getElementById("qtyInInput").disabled = !enabled; 
+  document.getElementById("qtyStokInput").disabled = !enabled; 
+  document.getElementById("remarkInput").disabled = !enabled; 
+  document.getElementById("btnSave").disabled = !enabled; 
+} 
+
+/* UI UTILITY FUNCTIONS */ 
+function showAlert(message, type) { 
+  const alertBox = document.getElementById("alertBox"); 
+  if (type === "hide") { 
+    alertBox.style.display = "none"; 
+    return; 
+  } 
+  alertBox.className = `alert alert-${type}`; 
+  alertBox.innerHTML = message; 
+  alertBox.style.display = "block"; 
+} 
+
+function showLoading(show, text = "Memuat...") { 
+  const overlay = document.getElementById("loadingOverlay"); 
+  document.getElementById("loadingText").innerText = text; 
+  overlay.style.display = show ? "flex" : "none"; 
+} 
+
+function showElement(id) { 
+  document.getElementById(id).style.display = "block"; 
+} 
+
+function hideElement(id) { 
+  document.getElementById(id).style.display = "none"; 
+} 
+
+function formatDisplayDate(dateStr) { 
+  if (!dateStr) return "-"; 
+  const parts = dateStr.split("-"); 
+  if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`; 
+  return dateStr; 
+} 
+
+function escapeHtml(text) { 
+  if (!text) return ""; 
+  return String(text) 
+    .replace(/&/g, "&amp;") 
+    .replace(/</g, "&lt;") 
+    .replace(/>/g, "&gt;") 
+    .replace(/"/g, "&quot;") 
+    .replace(/'/g, "&#039;"); 
+} 
+</script> 
+</body> 
 </html>
