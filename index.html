@@ -1205,37 +1205,82 @@
                     resetFullForm();
 
                 } else {
-                    // MODE INPUT BARU (POST)
-                    showLoading(true, "Menyimpan data baru...");
+                    // MODE INPUT BARU (POST) — dengan pengecekan upsert
+                    showLoading(true, "Memeriksa data duplikat...");
 
-                    const payloadNew = {
-                        batch: batch,
-                        itemname: itemName,
-                        itemnumber: itemCode,
-                        remark: remark || "",
-                        posisi: posisi || "",
-                        stok: qty,
-                        tanggal: getTodayISOString(),
-                        uploaded_at: new Date().toISOString()
-                    };
+                    const todayISO = getTodayISOString();
+                    const existing = stockData.find(d =>
+                        d.itemnumber === itemCode &&
+                        d.batch === batch &&
+                        String(d.tanggal) === todayISO
+                    );
 
-                    const response = await saveStockToFirebase(payloadNew);
+                    if (existing) {
+                        // UPSERT: record dengan tanggal+itemnumber+batch sama sudah ada → tambah qty
+                        showLoading(true, "Menambah qty ke record yang sudah ada...");
 
-                    if (remark) saveRemarkToLocalStorage(remark);
-                    
-                    stockData.push({
-                        _id: response.name,
-                        ...payloadNew
-                    });
+                        const qtyLama = parseFloat(existing.stok) || 0;
+                        const qtyBaru = qtyLama + qty;
 
-                    showAlert(`✓ DATA BERHASIL DISIMPAN<br><br>Item: <b>${escapeHtml(itemCode)}</b><br>Batch: <b>${escapeHtml(batch)}</b><br>Qty: <b>${qty}</b>`, "success");
+                        const payloadUpdate = {
+                            stok: qtyBaru,
+                            updated_at: new Date().toISOString()
+                        };
 
-                    document.getElementById("qtyInput").value = "";
-                    document.getElementById("remarkInput").value = "";
-                    document.getElementById("posisiInput").value = "";
+                        await updateStockInFirebase(existing._id, payloadUpdate);
 
-                    const itemRecords = stockData.filter(d => d.itemnumber === itemCode);
-                    processBatchSelection(itemRecords);
+                        // Update cache lokal
+                        const index = stockData.findIndex(d => d._id === existing._id);
+                        if (index !== -1) {
+                            stockData[index].stok = qtyBaru;
+                            stockData[index].updated_at = payloadUpdate.updated_at;
+                        }
+
+                        showAlert(
+                            `✓ QTY BERHASIL DITAMBAHKAN<br><br>Item: <b>${escapeHtml(itemCode)}</b><br>Batch: <b>${escapeHtml(batch)}</b><br>Qty Lama: <b>${qtyLama}</b> + <b>${qty}</b> = Qty Baru: <b>${qtyBaru}</b>`,
+                            "success"
+                        );
+
+                        document.getElementById("qtyInput").value = "";
+                        document.getElementById("remarkInput").value = "";
+                        document.getElementById("posisiInput").value = "";
+
+                        const itemRecords = stockData.filter(d => d.itemnumber === itemCode);
+                        processBatchSelection(itemRecords);
+
+                    } else {
+                        // INSERT BARU: belum ada record dengan kombinasi ini
+                        showLoading(true, "Menyimpan data baru...");
+
+                        const payloadNew = {
+                            batch: batch,
+                            itemname: itemName,
+                            itemnumber: itemCode,
+                            remark: remark || "",
+                            posisi: posisi || "",
+                            stok: qty,
+                            tanggal: todayISO,
+                            uploaded_at: new Date().toISOString()
+                        };
+
+                        const response = await saveStockToFirebase(payloadNew);
+
+                        if (remark) saveRemarkToLocalStorage(remark);
+
+                        stockData.push({
+                            _id: response.name,
+                            ...payloadNew
+                        });
+
+                        showAlert(`✓ DATA BERHASIL DISIMPAN<br><br>Item: <b>${escapeHtml(itemCode)}</b><br>Batch: <b>${escapeHtml(batch)}</b><br>Qty: <b>${qty}</b>`, "success");
+
+                        document.getElementById("qtyInput").value = "";
+                        document.getElementById("remarkInput").value = "";
+                        document.getElementById("posisiInput").value = "";
+
+                        const itemRecords = stockData.filter(d => d.itemnumber === itemCode);
+                        processBatchSelection(itemRecords);
+                    }
                 }
 
                 if (remark) saveRemarkToLocalStorage(remark);
