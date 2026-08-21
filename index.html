@@ -517,8 +517,13 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="qtyInput">Qty <span class="req">*</span></label>
-                    <input type="number" id="qtyInput" step="any" min="0.01" placeholder="Masukkan jumlah stok" required>
+                    <label for="qtyInInput">Qty In</label>
+                    <input type="number" id="qtyInInput" step="any" min="0" placeholder="Masukkan qty in (opsional)">
+                </div>
+
+                <div class="form-group">
+                    <label for="qtyStokInput">Qty Stok</label>
+                    <input type="number" id="qtyStokInput" step="any" min="0" placeholder="Masukkan qty stok (opsional)">
                     <div id="lastStockInfo" class="info-text">💡 Stok terakhir: -</div>
                 </div>
 
@@ -556,17 +561,23 @@
                 <span id="todayCount" class="today-count">0 Item</span>
             </div>
 
+            <div class="form-group" style="margin-bottom: 12px; position: relative;">
+                <input type="text" id="tableSearchInput" placeholder="🔍 Cari item name, item code, atau batch..." autocomplete="off">
+                <div id="tableSearchSuggestions" class="suggestions-list"></div>
+            </div>
+
             <div class="table-responsive">
                 <table class="data-table">
                     <thead>
                         <tr>
                             <th>Jam</th>
                             <th>Item Name</th>
-                            <th>Batch</th>                            
-                            <th>Qty</th>
-                            <th>Item Code</th>                            
+                            <th>Batch</th>
+                            <th>In</th>
+                            <th>Stok</th>
+                            <th>Item Code</th>
                             <th>Remark</th>
-                            <th>Aksi</th>                            
+                            <th>Aksi</th>
                         </tr>
                     </thead>
                     <tbody id="todayTableBody">
@@ -576,9 +587,10 @@
                     </tbody>
                     <tfoot>
                         <tr>
-                            <td colspan="4" style="text-align: right;">Total Qty:</td>
-                            <td id="todayTotalQty" style="color: var(--primary-color);">0</td>
-                            <td colspan="2"></td>
+                            <td colspan="3" style="text-align: right;">Total:</td>
+                            <td id="todayTotalIn" style="color: var(--success-color); font-weight:700;">0</td>
+                            <td id="todayTotalStok" style="color: var(--primary-color); font-weight:700;">0</td>
+                            <td colspan="3"></td>
                         </tr>
                     </tfoot>
                 </table>
@@ -756,6 +768,20 @@
             document.getElementById("btnCloseScanner").addEventListener("click", stopQRScanner);
             document.getElementById("btnSave").addEventListener("click", handleSave);
             document.getElementById("btnResetAll").addEventListener("click", resetFullForm);
+
+            // Search tabel hari ini
+            const tableSearch = document.getElementById("tableSearchInput");
+            if (tableSearch) {
+                tableSearch.addEventListener("input", () => renderTodayTable());
+                tableSearch.addEventListener("focus", () => renderTodayTable());
+            }
+
+            document.addEventListener("click", (e) => {
+                if (!e.target.closest("#tableSearchInput") && !e.target.closest("#tableSearchSuggestions")) {
+                    const s = document.getElementById("tableSearchSuggestions");
+                    if (s) s.style.display = "none";
+                }
+            });
         }
 
         /* LOGIKA RESET PENCARIAN ITEM */
@@ -1057,10 +1083,10 @@
             });
 
             const latestRecord = matchedRecords[0];
-            const lastQty = parseFloat(latestRecord.stok);
-            const formattedQty = isNaN(lastQty) ? latestRecord.stok : lastQty;
+            const lastIn = latestRecord.in !== undefined && latestRecord.in !== null ? latestRecord.in : '-';
+            const lastStok = latestRecord.stok !== undefined && latestRecord.stok !== null ? latestRecord.stok : '-';
 
-            infoElem.innerText = `💡 Stok terakhir: ${formattedQty}`;
+            infoElem.innerText = `💡 In terakhir: ${lastIn} | Stok terakhir: ${lastStok}`;
         }
 
         /* QR SCANNER INTEGRATION */
@@ -1119,7 +1145,8 @@
             toggleClearButton("itemName", "btnClearItemName");
 
             document.getElementById("batchInput").value = target.batch || "";
-            document.getElementById("qtyInput").value = target.stok || "";
+            document.getElementById("qtyInInput").value = target.in !== undefined && target.in !== null ? target.in : "";
+            document.getElementById("qtyStokInput").value = target.stok !== undefined && target.stok !== null ? target.stok : "";
             document.getElementById("remarkInput").value = target.remark || "";
             document.getElementById("posisiInput").value = target.posisi || "";
 
@@ -1153,8 +1180,10 @@
             const itemCode = document.getElementById("itemCode").value.trim();
             const itemName = document.getElementById("itemName").value.trim();
             const batch = document.getElementById("batchInput").value.trim();
-            const qtyStr = document.getElementById("qtyInput").value;
-            const qty = parseFloat(qtyStr);
+            const qtyInStr = document.getElementById("qtyInInput").value;
+            const qtyStokStr = document.getElementById("qtyStokInput").value;
+            const qtyIn = qtyInStr !== "" ? parseFloat(qtyInStr) : null;
+            const qtyStok = qtyStokStr !== "" ? parseFloat(qtyStokStr) : null;
             const remark = document.getElementById("remarkInput").value.trim();
             const posisi = document.getElementById("posisiInput").value.trim();
 
@@ -1170,8 +1199,16 @@
                 showAlert("⚠ Batch tidak boleh kosong.", "error");
                 return;
             }
-            if (isNaN(qty) || qty <= 0) {
-                showAlert("⚠ Qty harus berupa angka dan lebih besar dari 0.", "error");
+            if (qtyIn === null && qtyStok === null) {
+                showAlert("⚠ Minimal salah satu Qty In atau Qty Stok harus diisi.", "error");
+                return;
+            }
+            if (qtyIn !== null && (isNaN(qtyIn) || qtyIn < 0)) {
+                showAlert("⚠ Qty In harus berupa angka dan tidak boleh negatif.", "error");
+                return;
+            }
+            if (qtyStok !== null && (isNaN(qtyStok) || qtyStok < 0)) {
+                showAlert("⚠ Qty Stok harus berupa angka dan tidak boleh negatif.", "error");
                 return;
             }
 
@@ -1189,9 +1226,10 @@
                         itemnumber: itemCode,
                         remark: remark || "",
                         posisi: posisi || "",
-                        stok: qty,
                         updated_at: new Date().toISOString()
                     };
+                    if (qtyIn !== null) payloadUpdate.in = qtyIn;
+                    if (qtyStok !== null) payloadUpdate.stok = qtyStok;
 
                     await updateStockInFirebase(currentEditId, payloadUpdate);
 
@@ -1200,7 +1238,7 @@
                         stockData[index] = { ...stockData[index], ...payloadUpdate };
                     }
 
-                    showAlert(`✓ DATA BERHASIL DIPERBARUI<br><br>Item: <b>${escapeHtml(itemCode)}</b><br>Batch: <b>${escapeHtml(batch)}</b><br>Qty Baru: <b>${qty}</b>`, "success");
+                    showAlert(`✓ DATA BERHASIL DIPERBARUI<br><br>Item: <b>${escapeHtml(itemCode)}</b><br>Batch: <b>${escapeHtml(batch)}</b>${qtyIn !== null ? `<br>Qty In: <b>${qtyIn}</b>` : ''}${qtyStok !== null ? `<br>Qty Stok: <b>${qtyStok}</b>` : ''}`, "success");
                     
                     resetFullForm();
 
@@ -1210,43 +1248,50 @@
 
                     const todayISO = getTodayISOString();
                     const existing = stockData.find(d =>
-                        d.itemnumber === itemCode &&
-                        d.batch === batch &&
-                        String(d.tanggal) === todayISO
+                        String(d.itemnumber).trim() === itemCode &&
+                        String(d.batch).trim() === batch &&
+                        String(d.tanggal).trim() === todayISO
                     );
 
                     if (existing) {
-                        // UPSERT: record dengan tanggal+itemnumber+batch sama sudah ada → tambah qty
+                        // UPSERT: akumulasi field yang diisi saja
                         showLoading(true, "Menambah qty ke record yang sudah ada...");
 
-                        const qtyLama = parseFloat(existing.stok) || 0;
-                        const qtyBaru = qtyLama + qty;
+                        const payloadUpdate = { updated_at: new Date().toISOString() };
+                        let alertDetail = "";
 
-                        const payloadUpdate = {
-                            stok: qtyBaru,
-                            updated_at: new Date().toISOString()
-                        };
+                        if (qtyIn !== null) {
+                            const inLama = parseFloat(existing.in) || 0;
+                            const inBaru = inLama + qtyIn;
+                            payloadUpdate.in = inBaru;
+                            alertDetail += `<br>Qty In: <b>${inLama}</b> + <b>${qtyIn}</b> = <b>${inBaru}</b>`;
+                        }
+                        if (qtyStok !== null) {
+                            const stokLama = parseFloat(existing.stok) || 0;
+                            const stokBaru = stokLama + qtyStok;
+                            payloadUpdate.stok = stokBaru;
+                            alertDetail += `<br>Qty Stok: <b>${stokLama}</b> + <b>${qtyStok}</b> = <b>${stokBaru}</b>`;
+                        }
 
                         await updateStockInFirebase(existing._id, payloadUpdate);
 
-                        // Update cache lokal
                         const index = stockData.findIndex(d => d._id === existing._id);
                         if (index !== -1) {
-                            stockData[index].stok = qtyBaru;
-                            stockData[index].updated_at = payloadUpdate.updated_at;
+                            stockData[index] = { ...stockData[index], ...payloadUpdate };
                         }
 
                         showAlert(
-                            `✓ QTY BERHASIL DITAMBAHKAN<br><br>Item: <b>${escapeHtml(itemCode)}</b><br>Batch: <b>${escapeHtml(batch)}</b><br>Qty Lama: <b>${qtyLama}</b> + <b>${qty}</b> = Qty Baru: <b>${qtyBaru}</b>`,
+                            `✓ QTY BERHASIL DITAMBAHKAN<br><br>Item: <b>${escapeHtml(itemCode)}</b><br>Batch: <b>${escapeHtml(batch)}</b>${alertDetail}`,
                             "success"
                         );
 
-                        document.getElementById("qtyInput").value = "";
+                        document.getElementById("qtyInInput").value = "";
+                        document.getElementById("qtyStokInput").value = "";
                         document.getElementById("remarkInput").value = "";
                         document.getElementById("posisiInput").value = "";
 
-                        const itemRecords = stockData.filter(d => d.itemnumber === itemCode);
-                        processBatchSelection(itemRecords);
+                        const itemRecordsU = stockData.filter(d => d.itemnumber === itemCode);
+                        processBatchSelection(itemRecordsU);
 
                     } else {
                         // INSERT BARU: belum ada record dengan kombinasi ini
@@ -1258,10 +1303,11 @@
                             itemnumber: itemCode,
                             remark: remark || "",
                             posisi: posisi || "",
-                            stok: qty,
                             tanggal: todayISO,
                             uploaded_at: new Date().toISOString()
                         };
+                        if (qtyIn !== null) payloadNew.in = qtyIn;
+                        if (qtyStok !== null) payloadNew.stok = qtyStok;
 
                         const response = await saveStockToFirebase(payloadNew);
 
@@ -1272,14 +1318,15 @@
                             ...payloadNew
                         });
 
-                        showAlert(`✓ DATA BERHASIL DISIMPAN<br><br>Item: <b>${escapeHtml(itemCode)}</b><br>Batch: <b>${escapeHtml(batch)}</b><br>Qty: <b>${qty}</b>`, "success");
+                        showAlert(`✓ DATA BERHASIL DISIMPAN<br><br>Item: <b>${escapeHtml(itemCode)}</b><br>Batch: <b>${escapeHtml(batch)}</b>${qtyIn !== null ? `<br>Qty In: <b>${qtyIn}</b>` : ''}${qtyStok !== null ? `<br>Qty Stok: <b>${qtyStok}</b>` : ''}`, "success");
 
-                        document.getElementById("qtyInput").value = "";
+                        document.getElementById("qtyInInput").value = "";
+                        document.getElementById("qtyStokInput").value = "";
                         document.getElementById("remarkInput").value = "";
                         document.getElementById("posisiInput").value = "";
 
-                        const itemRecords = stockData.filter(d => d.itemnumber === itemCode);
-                        processBatchSelection(itemRecords);
+                        const itemRecordsN = stockData.filter(d => d.itemnumber === itemCode);
+                        processBatchSelection(itemRecordsN);
                     }
                 }
 
@@ -1300,36 +1347,106 @@
         function renderTodayTable() {
             const todayISO = getTodayISOString();
             const tbody = document.getElementById("todayTableBody");
-            
-            const todayData = stockData.filter(item => String(item.tanggal) === todayISO);
+            const searchQuery = document.getElementById("tableSearchInput")
+                ? document.getElementById("tableSearchInput").value.trim().toLowerCase()
+                : "";
+
+            let todayData = stockData.filter(item => String(item.tanggal) === todayISO);
             todayData.sort((a, b) => String(b.uploaded_at || "").localeCompare(String(a.uploaded_at || "")));
 
-            document.getElementById("todayCount").innerText = `${todayData.length} Item`;
-            
-            const totalQty = todayData.reduce((sum, item) => sum + (parseFloat(item.stok) || 0), 0);
-            document.getElementById("todayTotalQty").innerText = totalQty.toLocaleString("id-ID");
+            // Filter berdasarkan search
+            const filteredData = searchQuery
+                ? todayData.filter(item => {
+                    const combined = `${item.itemnumber || ""} ${item.itemname || ""} ${item.batch || ""}`.toLowerCase();
+                    return combined.includes(searchQuery);
+                })
+                : todayData;
 
-            if (todayData.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="7" class="empty-today">Belum ada data diinput hari ini.</td></tr>`;
+            document.getElementById("todayCount").innerText = `${filteredData.length}${searchQuery ? `/${todayData.length}` : ""} Item`;
+
+            const totalIn = filteredData.reduce((sum, item) => sum + (parseFloat(item.in) || 0), 0);
+            const totalStok = filteredData.reduce((sum, item) => sum + (parseFloat(item.stok) || 0), 0);
+            document.getElementById("todayTotalIn").innerText = totalIn.toLocaleString("id-ID");
+            document.getElementById("todayTotalStok").innerText = totalStok.toLocaleString("id-ID");
+
+            if (filteredData.length === 0) {
+                const msg = searchQuery ? "Tidak ada data yang cocok dengan pencarian." : "Belum ada data diinput hari ini.";
+                tbody.innerHTML = `<tr><td colspan="8" class="empty-today">${msg}</td></tr>`;
                 return;
             }
 
-            tbody.innerHTML = todayData.map(item => {
+            tbody.innerHTML = filteredData.map(item => {
                 const timeStr = item.uploaded_at ? new Date(item.uploaded_at).toLocaleTimeString("id-ID", { hour: '2-digit', minute: '2-digit' }) : '-';
+                const inVal = item.in !== undefined && item.in !== null ? item.in : '-';
+                const stokVal = item.stok !== undefined && item.stok !== null ? item.stok : '-';
                 return `
                     <tr>
                         <td>${timeStr}</td>
                         <td><b>${escapeHtml(item.itemname)}</b></td>
                         <td>${escapeHtml(item.batch)}</td>
-                        <td style="color: var(--success-color); font-weight:700;">+${item.stok}</td>
+                        <td style="color: var(--success-color); font-weight:700;">${inVal}</td>
+                        <td style="color: var(--primary-color); font-weight:700;">${stokVal}</td>
                         <td><b>${escapeHtml(item.itemnumber)}</b></td>
                         <td>${escapeHtml(item.remark || '-')}</td>
                         <td>
                             <button type="button" class="btn-action-edit" onclick="startEditRecord('${item._id}')">✏️ Edit</button>
-                        </td>                        
+                        </td>
                     </tr>
                 `;
             }).join("");
+
+            // Update autocomplete suggestions dari data hari ini
+            updateTableSearchSuggestions(todayData, searchQuery);
+        }
+
+        /* AUTOCOMPLETE SEARCH TABEL */
+        function updateTableSearchSuggestions(todayData, query) {
+            const container = document.getElementById("tableSearchSuggestions");
+            if (!query || !container) {
+                if (container) container.style.display = "none";
+                return;
+            }
+
+            const seen = new Set();
+            const suggestions = [];
+
+            todayData.forEach(item => {
+                const combined = `${item.itemnumber || ""} ${item.itemname || ""} ${item.batch || ""}`.toLowerCase();
+                if (!combined.includes(query)) return;
+
+                // Suggest itemnumber
+                const key1 = `code:${item.itemnumber}`;
+                if (!seen.has(key1)) {
+                    seen.add(key1);
+                    suggestions.push({ label: item.itemnumber, sub: item.itemname, value: item.itemnumber });
+                }
+
+                // Suggest batch
+                const key2 = `batch:${item.batch}`;
+                if (!seen.has(key2)) {
+                    seen.add(key2);
+                    suggestions.push({ label: item.batch, sub: `Batch — ${item.itemnumber}`, value: item.batch });
+                }
+            });
+
+            if (suggestions.length === 0) {
+                container.style.display = "none";
+                return;
+            }
+
+            container.innerHTML = suggestions.slice(0, 8).map(s => `
+                <div class="suggestion-item" onclick="selectTableSearch('${escapeHtml(s.value)}')">
+                    <div class="item-code">${escapeHtml(s.label)}</div>
+                    <div class="item-desc">${escapeHtml(s.sub)}</div>
+                </div>
+            `).join("");
+            container.style.display = "block";
+        }
+
+        function selectTableSearch(value) {
+            document.getElementById("tableSearchInput").value = value;
+            document.getElementById("tableSearchSuggestions").style.display = "none";
+            renderTodayTable();
         }
 
         /* FORM RESET & KELUAR DARI MODE EDIT */
@@ -1362,7 +1479,8 @@
 
         function setFormInputsEnabled(enabled) {
             document.getElementById("batchInput").disabled = !enabled;
-            document.getElementById("qtyInput").disabled = !enabled;
+            document.getElementById("qtyInInput").disabled = !enabled;
+            document.getElementById("qtyStokInput").disabled = !enabled;
             document.getElementById("remarkInput").disabled = !enabled;
             document.getElementById("posisiInput").disabled = !enabled;
             document.getElementById("btnSave").disabled = !enabled;
