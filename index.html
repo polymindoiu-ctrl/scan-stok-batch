@@ -305,6 +305,83 @@
             color: var(--text-muted);
         }
 
+
+        /* UPSERT TOGGLE */
+        .upsert-toggle-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 12px;
+            padding: 10px 14px;
+            background: #f1f5f9;
+            border-radius: var(--radius);
+            border: 1px solid var(--border-color);
+        }
+
+        .upsert-toggle-label {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--text-main);
+            flex: 1;
+        }
+
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 24px;
+            flex-shrink: 0;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #cbd5e1;
+            border-radius: 24px;
+            transition: 0.3s;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            border-radius: 50%;
+            transition: 0.3s;
+        }
+
+        .toggle-switch input:checked + .toggle-slider {
+            background-color: var(--primary-color);
+        }
+
+        .toggle-switch input:checked + .toggle-slider:before {
+            transform: translateX(20px);
+        }
+
+        .upsert-status-on {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            min-width: 28px;
+        }
+
+        .upsert-status-off {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            min-width: 28px;
+        }
+
         /* QR SCANNER CONTAINER */
         #scanner-modal {
             display: none;
@@ -517,6 +594,11 @@
                 </div>
 
                 <div class="form-group">
+                    <label for="qtyInInput">Qty In</label>
+                    <input type="number" id="qtyInInput" step="any" min="0" placeholder="Masukkan qty in (opsional)">
+                </div>
+
+                <div class="form-group">
                     <label for="qtyStokInput">Qty Stok</label>
                     <input type="number" id="qtyStokInput" step="any" min="0" placeholder="Masukkan qty stok (opsional)">
                     <div id="lastStockInfo" class="info-text">💡 Stok terakhir: -</div>
@@ -527,15 +609,24 @@
                     <input type="text" id="remarkInput" placeholder="Contoh: Palet 12 (opsional)">
                     <div id="remarkSuggestions" class="suggestions-list"></div>
                 </div>
-               
+
                 <div class="form-group">
-                    <label for="qtyInInput">Qty In</label>
-                    <input type="number" id="qtyInInput" step="any" min="0" placeholder="Masukkan qty in (opsional)">
+                    <label for="posisiInput">Posisi</label>
+                    <input type="text" id="posisiInput" placeholder="Contoh: Rak A1 (opsional)">
                 </div>
-                
+
                 <div class="form-group">
                     <label>Tanggal Transaksi</label>
                     <input type="text" id="displayTanggal" readonly>
+                </div>
+
+                <div class="upsert-toggle-wrapper">
+                    <span class="upsert-toggle-label">Mode Upsert</span>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="upsertToggle">
+                        <span class="toggle-slider"></span>
+                    </label>
+                    <span id="upsertToggleStatus" class="upsert-status-off">OFF</span>
                 </div>
 
                 <button type="button" id="btnSave" class="btn btn-primary" style="margin-top: 8px;">
@@ -757,6 +848,26 @@
                 if (!e.target.closest("#remarkInput") && !e.target.closest("#remarkSuggestions")) {
                     hideElement("remarkSuggestions");
                 }
+            });
+
+            // UPSERT TOGGLE — init dari localStorage
+            const upsertToggle = document.getElementById("upsertToggle");
+            const upsertStatus = document.getElementById("upsertToggleStatus");
+
+            function applyUpsertToggleUI(isOn) {
+                upsertStatus.textContent = isOn ? "ON" : "OFF";
+                upsertStatus.className = isOn ? "upsert-status-on" : "upsert-status-off";
+            }
+
+            const savedUpsert = localStorage.getItem("upsertMode");
+            const initUpsert = savedUpsert === null ? false : savedUpsert === "true";
+            upsertToggle.checked = initUpsert;
+            applyUpsertToggleUI(initUpsert);
+
+            upsertToggle.addEventListener("change", () => {
+                const isOn = upsertToggle.checked;
+                localStorage.setItem("upsertMode", isOn);
+                applyUpsertToggleUI(isOn);
             });
 
             document.getElementById("btnScanQR").addEventListener("click", startQRScanner);
@@ -1238,15 +1349,23 @@
                     resetFullForm();
 
                 } else {
-                    // MODE INPUT BARU (POST) — dengan pengecekan upsert
-                    showLoading(true, "Memeriksa data duplikat...");
-
+                    // MODE INPUT BARU (POST)
+                    const upsertModeOn = document.getElementById("upsertToggle").checked;
                     const todayISO = getTodayISOString();
-                    const existing = stockData.find(d =>
-                        String(d.itemnumber).trim() === itemCode &&
-                        String(d.batch).trim() === batch &&
-                        String(d.tanggal).trim() === todayISO
-                    );
+
+                    const existing = upsertModeOn
+                        ? stockData.find(d =>
+                            String(d.itemnumber).trim() === itemCode &&
+                            String(d.batch).trim() === batch &&
+                            String(d.tanggal).trim() === todayISO
+                          )
+                        : null;
+
+                    if (upsertModeOn) {
+                        showLoading(true, "Memeriksa data duplikat...");
+                    } else {
+                        showLoading(true, "Menyimpan data baru...");
+                    }
 
                     if (existing) {
                         // UPSERT: akumulasi field yang diisi saja
