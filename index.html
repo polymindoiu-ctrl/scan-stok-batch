@@ -1318,15 +1318,15 @@
                 const timeStr = item.uploaded_at ? new Date(item.uploaded_at).toLocaleTimeString("id-ID", { hour: '2-digit', minute: '2-digit' }) : '-';
                 return `
                     <tr>
-                        <td>
-                            <button type="button" class="btn-action-edit" onclick="startEditRecord('${item._id}')">✏️ Edit</button>
-                        </td>
                         <td>${timeStr}</td>
-                        <td><b>${escapeHtml(item.itemnumber)}</b></td>
                         <td><b>${escapeHtml(item.itemname)}</b></td>
                         <td>${escapeHtml(item.batch)}</td>
                         <td style="color: var(--success-color); font-weight:700;">+${item.stok}</td>
+                        <td><b>${escapeHtml(item.itemnumber)}</b></td>
                         <td>${escapeHtml(item.remark || '-')}</td>
+                        <td>
+                            <button type="button" class="btn-action-edit" onclick="startEditRecord('${item._id}')">✏️ Edit</button>
+                        </td>                        
                     </tr>
                 `;
             }).join("");
