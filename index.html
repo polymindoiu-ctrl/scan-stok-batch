@@ -529,22 +529,28 @@ input[readonly] {
         </div> 
         <div id="itemNameSuggestions" class="suggestions-list"></div> 
       </div> 
-      <div class="form-group"> 
-        <label for="batchInput">Batch <span class="req">*</span></label> 
-        <input type="text" id="batchInput" placeholder="Pilih/Ketik Batch..." required> 
-        <div id="batchSuggestions" class="suggestions-list"></div> 
-        <div id="batchInfo" class="info-text"></div> 
-      </div> 
+<div class="form-group">
+  <label for="batchInput">Batch <span class="req">*</span></label>
+  <div class="search-input-wrapper">
+    <input type="text" id="batchInput" placeholder="Pilih/Ketik Batch..." required>
+    <button type="button" id="btnClearBatch" class="btn-clear-search" title="Reset Batch">✕</button>
+  </div>
+  <div id="batchSuggestions" class="suggestions-list"></div>
+  <div id="batchInfo" class="info-text"></div>
+</div>
       <div class="form-group"> 
         <label for="qtyStokInput">Qty Stok</label> 
         <input type="number" id="qtyStokInput" step="any" min="0" placeholder="Masukkan qty stok (opsional)"> 
         <div id="lastStockInfo" class="info-text">💡 Stok terakhir: -</div> 
       </div> 
-      <div class="form-group"> 
-        <label for="remarkInput">Remark</label> 
-        <input type="text" id="remarkInput" placeholder="Contoh: Palet 12 (opsional)"> 
-        <div id="remarkSuggestions" class="suggestions-list"></div> 
-      </div> 
+<div class="form-group">
+  <label for="remarkInput">Remark</label>
+  <div class="search-input-wrapper">
+    <input type="text" id="remarkInput" placeholder="Contoh: Palet 12 (opsional)">
+    <button type="button" id="btnClearRemark" class="btn-clear-search" title="Reset Remark">✕</button>
+  </div>
+  <div id="remarkSuggestions" class="suggestions-list"></div>
+</div>
       <div class="form-group"> 
         <label for="qtyInInput">Qty In</label> 
         <input type="number" id="qtyInInput" step="any" min="0" placeholder="Masukkan qty in (opsional)"> 
@@ -722,95 +728,104 @@ function updateConnectionStatus(isOnline) {
 } 
 
 /* EVENT LISTENERS SETUP */ 
-function setupEventListeners() { 
-  const itemCodeInput = document.getElementById("itemCode"); 
-  itemCodeInput.addEventListener("input", (e) => { 
-    handleSearchInput(e); 
-    toggleClearButton("itemCode", "btnClearItemCode"); 
-  }); 
-  itemCodeInput.addEventListener("focus", handleSearchInput); 
+function setupEventListeners() {
+  const itemCodeInput = document.getElementById("itemCode");
+  itemCodeInput.addEventListener("input", (e) => {
+    handleSearchInput(e);
+    toggleClearButton("itemCode", "btnClearItemCode");
+  });
+  itemCodeInput.addEventListener("focus", handleSearchInput);
 
-  const itemNameInput = document.getElementById("itemName"); 
-  itemNameInput.addEventListener("input", (e) => { 
-    handleSearchInput(e); 
-    toggleClearButton("itemName", "btnClearItemName"); 
-  }); 
-  itemNameInput.addEventListener("focus", handleSearchInput); 
+  const itemNameInput = document.getElementById("itemName");
+  itemNameInput.addEventListener("input", (e) => {
+    handleSearchInput(e);
+    toggleClearButton("itemName", "btnClearItemName");
+  });
+  itemNameInput.addEventListener("focus", handleSearchInput);
 
-  // Listener Tombol Reset Pencarian "X" 
-  document.getElementById("btnClearItemCode").addEventListener("click", () => { 
-    clearSearchInput("itemCode", "itemSuggestions", "btnClearItemCode"); 
-  }); 
-  document.getElementById("btnClearItemName").addEventListener("click", () => { 
-    clearSearchInput("itemName", "itemNameSuggestions", "btnClearItemName"); 
-  }); 
+  document.getElementById("btnClearItemCode").addEventListener("click", () => {
+    clearSearchInput("itemCode", "itemSuggestions", "btnClearItemCode");
+  });
+  document.getElementById("btnClearItemName").addEventListener("click", () => {
+    clearSearchInput("itemName", "itemNameSuggestions", "btnClearItemName");
+  });
 
-  const batchInput = document.getElementById("batchInput"); 
-  batchInput.addEventListener("focus", showBatchSuggestions); 
-  batchInput.addEventListener("input", checkCustomBatchInput); 
+  // BATCH INPUT — satu listener saja
+  const batchInput = document.getElementById("batchInput");
+  batchInput.addEventListener("focus", showBatchSuggestions);
+  batchInput.addEventListener("input", (e) => {
+    toggleClearButton("batchInput", "btnClearBatch");
+    checkCustomBatchInput();
+  });
 
-  const remarkInput = document.getElementById("remarkInput"); 
-  remarkInput.addEventListener("focus", handleRemarkInput); 
-  remarkInput.addEventListener("input", handleRemarkInput); 
+  // REMARK INPUT — satu listener saja
+  const remarkInput = document.getElementById("remarkInput");
+  remarkInput.addEventListener("focus", handleRemarkInput);
+  remarkInput.addEventListener("input", (e) => {
+    toggleClearButton("remarkInput", "btnClearRemark");
+    handleRemarkInput(e);
+  });
 
-  document.addEventListener("click", (e) => { 
-    if (!e.target.closest("#itemCode") && !e.target.closest("#itemSuggestions") && !e.target.closest("#btnClearItemCode")) { 
-      hideElement("itemSuggestions"); 
-    } 
-    if (!e.target.closest("#itemName") && !e.target.closest("#itemNameSuggestions") && !e.target.closest("#btnClearItemName")) { 
-      hideElement("itemNameSuggestions"); 
-    } 
-    if (!e.target.closest("#batchInput") && !e.target.closest("#batchSuggestions")) { 
-      hideElement("batchSuggestions"); 
-    } 
-    if (!e.target.closest("#remarkInput") && !e.target.closest("#remarkSuggestions")) { 
-      hideElement("remarkSuggestions"); 
-    } 
-    if (!e.target.closest("#tableSearchInput") && !e.target.closest("#tableSearchSuggestions") && !e.target.closest("#btnClearTableSearch")) { 
-      const s = document.getElementById("tableSearchSuggestions"); 
-      if (s) s.style.display = "none"; 
-    } 
-  }); 
+  // Tombol clear batch & remark
+  document.getElementById("btnClearBatch").addEventListener("click", clearBatchInput);
+  document.getElementById("btnClearRemark").addEventListener("click", clearRemarkInput);
 
-  // UPSERT TOGGLE — init dari localStorage 
-  const upsertToggle = document.getElementById("upsertToggle"); 
-  const upsertStatus = document.getElementById("upsertToggleStatus"); 
+  // Click outside — bersihkan duplikat
+  document.addEventListener("click", (e) => {
+    if (!e.target.closest("#itemCode") && !e.target.closest("#itemSuggestions") && !e.target.closest("#btnClearItemCode")) {
+      hideElement("itemSuggestions");
+    }
+    if (!e.target.closest("#itemName") && !e.target.closest("#itemNameSuggestions") && !e.target.closest("#btnClearItemName")) {
+      hideElement("itemNameSuggestions");
+    }
+    if (!e.target.closest("#batchInput") && !e.target.closest("#batchSuggestions") && !e.target.closest("#btnClearBatch")) {
+      hideElement("batchSuggestions");
+    }
+    if (!e.target.closest("#remarkInput") && !e.target.closest("#remarkSuggestions") && !e.target.closest("#btnClearRemark")) {
+      hideElement("remarkSuggestions");
+    }
+    if (!e.target.closest("#tableSearchInput") && !e.target.closest("#tableSearchSuggestions") && !e.target.closest("#btnClearTableSearch")) {
+      const s = document.getElementById("tableSearchSuggestions");
+      if (s) s.style.display = "none";
+    }
+  });
 
-  function applyUpsertToggleUI(isOn) { 
-    upsertStatus.textContent = isOn ? "ON" : "OFF"; 
-    upsertStatus.className = isOn ? "upsert-status-on" : "upsert-status-off"; 
-  } 
+  // UPSERT TOGGLE
+  const upsertToggle = document.getElementById("upsertToggle");
+  const upsertStatus = document.getElementById("upsertToggleStatus");
 
-  const savedUpsert = localStorage.getItem("upsertMode"); 
-  const initUpsert = savedUpsert === null ? false : savedUpsert === "true"; 
-  upsertToggle.checked = initUpsert; 
-  applyUpsertToggleUI(initUpsert); 
+  function applyUpsertToggleUI(isOn) {
+    upsertStatus.textContent = isOn ? "ON" : "OFF";
+    upsertStatus.className = isOn ? "upsert-status-on" : "upsert-status-off";
+  }
 
-  upsertToggle.addEventListener("change", () => { 
-    const isOn = upsertToggle.checked; 
-    localStorage.setItem("upsertMode", isOn); 
-    applyUpsertToggleUI(isOn); 
-  }); 
+  const savedUpsert = localStorage.getItem("upsertMode");
+  const initUpsert = savedUpsert === null ? false : savedUpsert === "true";
+  upsertToggle.checked = initUpsert;
+  applyUpsertToggleUI(initUpsert);
 
-  document.getElementById("btnScanQR").addEventListener("click", startQRScanner); 
-  document.getElementById("btnCloseScanner").addEventListener("click", stopQRScanner); 
-  document.getElementById("btnSave").addEventListener("click", handleSave); 
-  document.getElementById("btnResetAll").addEventListener("click", resetFullForm); 
+  upsertToggle.addEventListener("change", () => {
+    const isOn = upsertToggle.checked;
+    localStorage.setItem("upsertMode", isOn);
+    applyUpsertToggleUI(isOn);
+  });
 
-  // Setup untuk tableSearchInput dengan tombol clear
+  document.getElementById("btnScanQR").addEventListener("click", startQRScanner);
+  document.getElementById("btnCloseScanner").addEventListener("click", stopQRScanner);
+  document.getElementById("btnSave").addEventListener("click", handleSave);
+  document.getElementById("btnResetAll").addEventListener("click", resetFullForm);
+
+  // TABLE SEARCH
   const tableSearchInput = document.getElementById("tableSearchInput");
   const btnClearTableSearch = document.getElementById("btnClearTableSearch");
-
   if (tableSearchInput && btnClearTableSearch) {
     tableSearchInput.addEventListener("input", function() {
       toggleClearButton("tableSearchInput", "btnClearTableSearch");
       renderTodayTable();
     });
-    
     tableSearchInput.addEventListener("focus", function() {
       renderTodayTable();
     });
-    
     btnClearTableSearch.addEventListener("click", function() {
       clearSearchInput("tableSearchInput", "tableSearchSuggestions", "btnClearTableSearch");
       renderTodayTable();
@@ -1139,15 +1154,16 @@ function startQRScanner() {
   }); 
 } 
 
-function onScanSuccess(decodedText) { 
-  const itemCode = decodedText.trim(); 
-  stopQRScanner(); 
-  document.getElementById("itemCode").value = itemCode; 
-  toggleClearButton("itemCode", "btnClearItemCode"); 
-  processSelectedItem(itemCode); 
-  setTimeout(() => { 
-    document.getElementById("qtyInput").focus(); 
-  }, 300); 
+function onScanSuccess(decodedText) {
+  const itemCode = decodedText.trim();
+  stopQRScanner();
+  document.getElementById("itemCode").value = itemCode;
+  toggleClearButton("itemCode", "btnClearItemCode");
+  processSelectedItem(itemCode);
+  setTimeout(() => {
+    const qtyIn = document.getElementById("qtyInInput");
+    if (qtyIn && !qtyIn.disabled) qtyIn.focus();
+  }, 300);
 } 
 
 function onScanFailure(error) {} 
@@ -1203,7 +1219,9 @@ function startEditRecord(recordId) {
   setFormInputsEnabled(true); 
   updateLastStockInfo(); 
   showAlert(`✏️ Anda sedang mengubah data untuk <b>${escapeHtml(target.itemnumber)}</b>. Klik "UPDATE DATA" untuk menyimpan perubahan.`, "warning"); 
-  window.scrollTo({ top: 0, behavior: 'smooth' }); 
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  toggleClearButton("batchInput", "btnClearBatch");
+  toggleClearButton("remarkInput", "btnClearRemark");
 } 
 
 /* LOGIKA SIMPAN / UPDATE DENGAN PATCH */ 
@@ -1503,6 +1521,8 @@ function resetFullForm() {
   showAlert("", "hide"); 
   updateLastStockInfo(); 
   document.getElementById("itemCode").focus(); 
+  hideElement("btnClearBatch");
+  hideElement("btnClearRemark");
 } 
 
 function setFormInputsEnabled(enabled) { 
@@ -1555,6 +1575,24 @@ function escapeHtml(text) {
     .replace(/"/g, "&quot;") 
     .replace(/'/g, "&#039;"); 
 } 
+
+function clearBatchInput() {
+  const batchInput = document.getElementById("batchInput");
+  batchInput.value = "";
+  hideElement("batchSuggestions");
+  hideElement("btnClearBatch");
+  document.getElementById("batchInfo").innerText = "";
+  updateLastStockInfo();
+  batchInput.focus();
+}
+
+function clearRemarkInput() {
+  const remarkInput = document.getElementById("remarkInput");
+  remarkInput.value = "";
+  hideElement("remarkSuggestions");
+  hideElement("btnClearRemark");
+  remarkInput.focus();
+}  
 </script> 
 </body> 
 </html>
